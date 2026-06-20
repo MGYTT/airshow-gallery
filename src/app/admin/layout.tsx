@@ -32,7 +32,7 @@ function getCorrectPin(): string {
       }
     }
   } catch { /* silent */ }
-  return ENV_PIN ?? "1234";
+  return ENV_PIN ?? "";  // ← pusty string = nic nie przejdzie
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
