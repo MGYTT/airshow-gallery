@@ -24,7 +24,7 @@ function buildDemoPhotos() {
         showName: show.name,
         url: `https://picsum.photos/seed/${show.id}-${i}/600/400`,
         alt: `${show.name} — zdjęcie ${i + 1}`,
-        featured: i === 0 && show.featured,
+        featured: i === 0 && (show.featured ?? false),
         tags: show.tags?.slice(0, 2) ?? [],
         uploadedAt: new Date(Date.now() - i * 86400000 * 3).toLocaleDateString("pl-PL"),
       });
