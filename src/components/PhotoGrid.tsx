@@ -3,14 +3,20 @@
 import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
 import {
-  X,
-  ZoomIn,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  Info,
+  X, ZoomIn, ChevronLeft, ChevronRight, Download, Info,
 } from "lucide-react";
-import type { Photo } from "@/lib/data";
+
+export interface Photo {
+  id:       string;
+  showId:   string;
+  src:      string;
+  alt:      string;
+  aircraft: string;
+  width:    number;
+  height:   number;
+  tags:     string[];
+  featured: boolean;
+}
 
 interface PhotoGridProps {
   photos: Photo[];
