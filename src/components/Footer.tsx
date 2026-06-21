@@ -398,10 +398,9 @@ export default function Footer() {
                           {sub}
                         </span>
                       </span>
-                      <ExternalLink
-                        size={12}
-                        style={{ color: "var(--color-text-faint)", flexShrink: 0 }}
-                      />
+                      {href.startsWith("http") || href.startsWith("mailto") ? (
+  <ExternalLink size={12} style={{ color: "var(--color-text-faint)", flexShrink: 0 }} />
+) : null}
                     </a>
                   ))}
                 </div>

@@ -48,9 +48,14 @@ export default function Navbar() {
   };
 
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href.split("#")[0]) && href.split("#")[0] !== "/";
-  };
+  if (href === "/") return pathname === "/";
+  const base = href.split("#")[0];
+  if (base === "/") return false;
+  if (href === "/gallery") {
+    return pathname.startsWith("/gallery") || pathname.startsWith("/pokaz");
+  }
+  return pathname.startsWith(base);
+};
 
   return (
     <>
