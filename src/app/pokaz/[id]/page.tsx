@@ -4,7 +4,6 @@ import Link from "next/link";
 import { MapPin, Calendar, Images, ChevronLeft, Star, Tag } from "lucide-react";
 import PhotoGrid from "@/components/PhotoGrid";
 
-// ── Typy ─────────────────────────────────────────────────────
 interface AirShow {
   id: string; name: string; location: string; date: string;
   year: number; description: string; coverImage: string;
@@ -16,7 +15,6 @@ interface Photo {
   tags: string[]; featured: boolean;
 }
 
-// ── Fetche ────────────────────────────────────────────────────
 const BASE    = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const API_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const headers = { apikey: API_KEY, Authorization: `Bearer ${API_KEY}` };
@@ -58,15 +56,15 @@ async function getPhotos(showId: string): Promise<Photo[]> {
       src:      p.src      as string,
       alt:      (p.alt      as string) ?? "",
       aircraft: (p.aircraft as string) ?? "",
-      width:    (p.width    as number) ?? 1200,
-      height:   (p.height   as number) ?? 800,
+      // ✅ fallback 0 — PhotoGrid obsłuży brakujące wymiary
+      width:    (p.width    as number) || 0,
+      height:   (p.height   as number) || 0,
       tags:     (p.tags     as string[]) ?? [],
       featured: Boolean(p.featured),
     }));
   } catch { return []; }
 }
 
-// ── generateStaticParams ─────────────────────────────────────
 export async function generateStaticParams() {
   try {
     const res = await fetch(
@@ -78,7 +76,6 @@ export async function generateStaticParams() {
   } catch { return []; }
 }
 
-// ── Page (Server Component) ───────────────────────────────────
 export default async function ShowPage({
   params,
 }: {
@@ -103,21 +100,29 @@ export default async function ShowPage({
       {/* Hero */}
       <div className="show-hero">
         {show.coverImage && (
-          <Image src={show.coverImage} alt={show.name} fill style={{ objectFit:"cover" }} priority/>
+          // ✅ quality={90} dla hero — dobry balans ostrości i szybkości ładowania
+          <Image
+            src={show.coverImage}
+            alt={show.name}
+            fill
+            quality={90}
+            style={{ objectFit: "cover" }}
+            priority
+          />
         )}
-        <div className="show-hero-overlay"/>
+        <div className="show-hero-overlay" />
         <div className="show-hero-content">
           <Link href="/" style={{ display:"inline-flex", alignItems:"center", gap:"var(--space-2)", color:"rgba(255,255,255,.6)", fontSize:"var(--text-xs)", textDecoration:"none", marginBottom:"var(--space-4)" }}>
-            <ChevronLeft size={14}/> Powrót
+            <ChevronLeft size={14} /> Powrót
           </Link>
           <h1 className="show-title">{show.name}</h1>
           <div className="show-meta-bar">
-            <span className="meta-chip"><MapPin size={12}/>{show.location}</span>
-            <span className="meta-chip"><Calendar size={12}/>{show.date || show.year}</span>
-            <span className="meta-chip"><Images size={12}/>{photos.length} zdjęć</span>
+            <span className="meta-chip"><MapPin size={12} />{show.location}</span>
+            <span className="meta-chip"><Calendar size={12} />{show.date || show.year}</span>
+            <span className="meta-chip"><Images size={12} />{photos.length} zdjęć</span>
             {show.featured && (
               <span className="meta-chip">
-                <Star size={12} fill="currentColor" style={{ color:"var(--color-gold)" }}/> Wyróżniony
+                <Star size={12} fill="currentColor" style={{ color: "var(--color-gold)" }} /> Wyróżniony
               </span>
             )}
           </div>
@@ -125,25 +130,25 @@ export default async function ShowPage({
       </div>
 
       {/* Opis + tagi */}
-      <div style={{ maxWidth:"var(--content-wide)", margin:"0 auto", padding:"var(--space-8) var(--space-8) 0" }}>
+      <div style={{ maxWidth: "var(--content-wide)", margin: "0 auto", padding: "var(--space-8) var(--space-8) 0" }}>
         {show.description && (
-          <p style={{ fontSize:"var(--text-base)", color:"var(--color-text-muted)", maxWidth:"72ch", lineHeight:1.7, marginBottom:"var(--space-5)" }}>
+          <p style={{ fontSize: "var(--text-base)", color: "var(--color-text-muted)", maxWidth: "72ch", lineHeight: 1.7, marginBottom: "var(--space-5)" }}>
             {show.description}
           </p>
         )}
         {show.tags.length > 0 && (
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"var(--space-2)", alignItems:"center" }}>
-            <Tag size={13} style={{ color:"var(--color-text-faint)" }}/>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center" }}>
+            <Tag size={13} style={{ color: "var(--color-text-faint)" }} />
             {show.tags.map(t => (
-              <span key={t} style={{ fontSize:"var(--text-xs)", padding:"3px 10px", borderRadius:"var(--radius-full)", background:"var(--color-surface-offset)", border:"1px solid var(--color-border)", color:"var(--color-text-muted)" }}>{t}</span>
+              <span key={t} style={{ fontSize: "var(--text-xs)", padding: "3px 10px", borderRadius: "var(--radius-full)", background: "var(--color-surface-offset)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>{t}</span>
             ))}
           </div>
         )}
       </div>
 
-      {/* ✅ PhotoGrid zamiast ShowPhotoGallery */}
-      <div style={{ maxWidth:"var(--content-wide)", margin:"0 auto", padding:"var(--space-8)" }}>
-        <PhotoGrid photos={photos}/>
+      {/* PhotoGrid */}
+      <div style={{ maxWidth: "var(--content-wide)", margin: "0 auto", padding: "var(--space-8)" }}>
+        <PhotoGrid photos={photos} />
       </div>
     </>
   );

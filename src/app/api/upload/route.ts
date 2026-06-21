@@ -1,4 +1,3 @@
-// src/app/api/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -14,11 +13,12 @@ export async function POST(req: NextRequest) {
   const showId   = formData.get("showId")   as string;
   const alt      = formData.get("alt")      as string ?? "";
   const aircraft = formData.get("aircraft") as string ?? "";
-  // ✅ NAPRAWA: parsuj tagi z CSV stringa
   const tagsRaw  = formData.get("tags")     as string ?? "";
   const tags     = tagsRaw ? tagsRaw.split(",").map(t => t.trim()).filter(Boolean) : [];
-  // ✅ NAPRAWA: parsuj boolean z stringa
   const featured = formData.get("featured") === "true";
+  // ✅ NOWE: pobierz rzeczywiste wymiary przesłane z klienta
+  const width    = parseInt(formData.get("width")  as string ?? "0", 10) || 0;
+  const height   = parseInt(formData.get("height") as string ?? "0", 10) || 0;
 
   if (!file) return NextResponse.json({ error: "Brak pliku" }, { status: 400 });
 
@@ -29,13 +29,17 @@ export async function POST(req: NextRequest) {
   if (file.size > 20 * 1024 * 1024)
     return NextResponse.json({ error: "Plik za duży (max 20MB)" }, { status: 400 });
 
-  const ext      = file.name.split(".").pop() ?? "jpg";
+  const ext      = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const fileName = `${showId}/${crypto.randomUUID()}.${ext}`;
   const buffer   = Buffer.from(await file.arrayBuffer());
 
   const { error: storageError } = await supabaseAdmin.storage
     .from("photos")
-    .upload(fileName, buffer, { contentType: file.type, upsert: false });
+    .upload(fileName, buffer, {
+      contentType: file.type,
+      upsert: false,
+      // ✅ Brak transformacji = oryginał trafia do Storage bez utraty jakości
+    });
 
   if (storageError)
     return NextResponse.json({ error: storageError.message }, { status: 500 });
@@ -43,8 +47,8 @@ export async function POST(req: NextRequest) {
   const { data: { publicUrl } } = supabaseAdmin.storage
     .from("photos")
     .getPublicUrl(fileName);
+  // ✅ getPublicUrl BEZ opcji transform — serwuje oryginał
 
-  // ✅ Pobierz wymiary — zapisz 0 jeśli nieznane (można uzupełnić po stronie klienta)
   const { data: photo, error: dbError } = await supabaseAdmin
     .from("photos")
     .insert({
@@ -52,10 +56,10 @@ export async function POST(req: NextRequest) {
       src:      publicUrl,
       alt,
       aircraft,
-      tags,        // ✅ teraz array, nie string
-      featured,    // ✅ teraz boolean, nie string
-      width:    1200,
-      height:   800,
+      tags,
+      featured,
+      width,   // ✅ rzeczywiste wymiary z klienta
+      height,  // ✅ rzeczywiste wymiary z klienta
     })
     .select()
     .single();

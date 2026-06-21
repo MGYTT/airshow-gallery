@@ -156,6 +156,8 @@ export default function UploadPage() {
         fd.append("aircraft", item.aircraft);
         fd.append("tags",     item.tags);
         fd.append("featured", String(item.featured));
+        fd.append("width",    String(item.dimensions?.w ?? 0));
+        fd.append("height",   String(item.dimensions?.h ?? 0));
         await uploadPhoto(fd);
         update(item.id, { status: "done", progress: 100 });
       } catch (err) {
