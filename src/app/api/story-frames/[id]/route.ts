@@ -3,10 +3,13 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+function isAdmin(req: NextRequest) {
+  return req.cookies.get("admin_session")?.value === "true";
+}
+
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   const { id } = await params;
-  const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
-  if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
 
@@ -23,8 +26,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
 export async function DELETE(req: NextRequest, { params }: Ctx) {
   const { id } = await params;
-  const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
-  if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { error } = await supabaseAdmin
     .from("story_frames")

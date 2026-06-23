@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Plus, Trash2, GripVertical,
   Save, Loader2, Image as ImageIcon,
-  Type, BarChart2, Lightbulb, ChevronDown, ChevronUp,
+  Type, BarChart2, Lightbulb, ChevronDown, ChevronUp, AlertCircle,
 } from "lucide-react";
 import type { FrameType } from "@/lib/supabase/types";
 
@@ -25,8 +25,7 @@ interface Frame {
   fact_text:       string | null;
   sort_order:      number;
   duration:        number;
-  // UI only
-  _dirty?: boolean;
+  _dirty?:  boolean;
   _saving?: boolean;
 }
 
@@ -36,14 +35,12 @@ interface Story {
   story_frames: Frame[];
 }
 
-const ADMIN = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "";
-
 const FRAME_TYPES: { value: FrameType; label: string; icon: React.ReactNode; desc: string }[] = [
-  { value:"photo",  label:"Zdjęcie",    icon:<ImageIcon size={14}/>,    desc:"Zdjęcie z podpisem i nazwą samolotu" },
-  { value:"burst",  label:"Seria",      icon:<ImageIcon size={14}/>,    desc:"Seria zdjęć — jak zdjęcie, ale oznaczona jako burst" },
-  { value:"text",   label:"Tekst",      icon:<Type size={14}/>,         desc:"Duży cytat lub nagłówek na ciemnym tle" },
-  { value:"stat",   label:"Statystyka", icon:<BarChart2 size={14}/>,    desc:"Wielka liczba z opisem (np. 47 samolotów)" },
-  { value:"fact",   label:"Ciekawostka",icon:<Lightbulb size={14}/>,    desc:"Ciekawy fakt w stylu cytatu" },
+  { value: "photo",  label: "Zdjęcie",     icon: <ImageIcon size={14}/>,  desc: "Zdjęcie z podpisem i nazwą samolotu" },
+  { value: "burst",  label: "Seria",       icon: <ImageIcon size={14}/>,  desc: "Seria zdjęć — jak zdjęcie, ale oznaczona jako burst" },
+  { value: "text",   label: "Tekst",       icon: <Type size={14}/>,       desc: "Duży cytat lub nagłówek na ciemnym tle" },
+  { value: "stat",   label: "Statystyka",  icon: <BarChart2 size={14}/>,  desc: "Wielka liczba z opisem (np. 47 samolotów)" },
+  { value: "fact",   label: "Ciekawostka", icon: <Lightbulb size={14}/>,  desc: "Ciekawy fakt w stylu cytatu" },
 ];
 
 function FrameTypeIcon({ type }: { type: FrameType }) {
@@ -52,8 +49,7 @@ function FrameTypeIcon({ type }: { type: FrameType }) {
 
 // ── Pojedyncza klatka — edytor ────────────────────────────────
 function FrameEditor({
-  frame, idx, total,
-  onChange, onDelete, onMove,
+  frame, idx, total, onChange, onDelete, onMove,
 }: {
   frame:    Frame;
   idx:      number;
@@ -63,38 +59,45 @@ function FrameEditor({
   onMove:   (id: string, dir: -1 | 1) => void;
 }) {
   const [open, setOpen] = useState(true);
-  const f = (field: keyof Frame) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    onChange(frame.id, { [field]: e.target.value || null } as Partial<Frame>);
+  const f = (field: keyof Frame) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      onChange(frame.id, { [field]: e.target.value || null } as Partial<Frame>);
 
   return (
-    <div style={{ border:"1px solid var(--color-border)", borderRadius:"var(--radius-xl)", background:"var(--color-surface)", overflow:"hidden" }}>
+    <div style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-xl)", background: "var(--color-surface)", overflow: "hidden" }}>
       {/* Nagłówek klatki */}
-      <div style={{ display:"flex", alignItems:"center", gap:"var(--space-3)", padding:"var(--space-3) var(--space-4)", background:"var(--color-surface-offset)", cursor:"pointer", userSelect:"none" }} onClick={() => setOpen(o => !o)}>
-        <GripVertical size={15} style={{ color:"var(--color-text-faint)", flexShrink:0, cursor:"grab" }}/>
-        <div style={{ width:22, height:22, borderRadius:"var(--radius-sm)", background:"var(--color-surface-dynamic)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--color-text-muted)" }}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-3) var(--space-4)", background: "var(--color-surface-offset)", cursor: "pointer", userSelect: "none" }}
+        onClick={() => setOpen(o => !o)}
+      >
+        <GripVertical size={15} style={{ color: "var(--color-text-faint)", flexShrink: 0, cursor: "grab" }}/>
+        <div style={{ width: 22, height: 22, borderRadius: "var(--radius-sm)", background: "var(--color-surface-dynamic)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-muted)" }}>
           <FrameTypeIcon type={frame.type}/>
         </div>
-        <span style={{ fontSize:"var(--text-xs)", fontWeight:700, color:"var(--color-text-muted)", minWidth:24 }}>#{idx + 1}</span>
-        <span style={{ fontSize:"var(--text-sm)", fontWeight:600, flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+        <span style={{ fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--color-text-muted)", minWidth: 24 }}>#{idx + 1}</span>
+        <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {frame.caption || frame.fact_text || frame.stat_value || `Klatka ${idx + 1}`}
         </span>
         {frame._dirty && (
-          <span style={{ fontSize:10, fontWeight:700, color:"var(--color-warning)", background:"var(--color-warning-highlight)", padding:"1px 6px", borderRadius:99, flexShrink:0 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-warning)", background: "var(--color-warning-highlight)", padding: "1px 6px", borderRadius: 99, flexShrink: 0 }}>
             niezapisane
           </span>
         )}
-        <div style={{ display:"flex", gap:2, flexShrink:0 }} onClick={e => e.stopPropagation()}>
-          <button className="fe-btn" disabled={idx === 0}       onClick={() => onMove(frame.id, -1)} title="W górę"><ChevronUp size={12}/></button>
-          <button className="fe-btn" disabled={idx === total-1} onClick={() => onMove(frame.id,  1)} title="W dół"><ChevronDown size={12}/></button>
+        <div style={{ display: "flex", gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+          <button className="fe-btn" disabled={idx === 0}         onClick={() => onMove(frame.id, -1)} title="W górę"><ChevronUp size={12}/></button>
+          <button className="fe-btn" disabled={idx === total - 1} onClick={() => onMove(frame.id,  1)} title="W dół"><ChevronDown size={12}/></button>
           <button className="fe-btn danger" onClick={() => onDelete(frame.id)} title="Usuń"><Trash2 size={12}/></button>
         </div>
-        {open ? <ChevronUp size={14} style={{ flexShrink:0, color:"var(--color-text-faint)" }}/> : <ChevronDown size={14} style={{ flexShrink:0, color:"var(--color-text-faint)" }}/>}
+        {open
+          ? <ChevronUp size={14} style={{ flexShrink: 0, color: "var(--color-text-faint)" }}/>
+          : <ChevronDown size={14} style={{ flexShrink: 0, color: "var(--color-text-faint)" }}/>
+        }
       </div>
 
       {open && (
-        <div style={{ padding:"var(--space-5)", display:"grid", gap:"var(--space-4)" }}>
+        <div style={{ padding: "var(--space-5)", display: "grid", gap: "var(--space-4)" }}>
           {/* Typ + czas trwania */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"var(--space-3)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-3)" }}>
             <div>
               <label className="fe-label">Typ klatki</label>
               <select className="fe-input" value={frame.type} onChange={e => onChange(frame.id, { type: e.target.value as FrameType })}>
@@ -113,9 +116,9 @@ function FrameEditor({
             </div>
           </div>
 
-          {/* Zdjęcie (dla photo / burst / stat) */}
+          {/* URL zdjęcia */}
           {(frame.type === "photo" || frame.type === "burst" || frame.type === "stat") && (
-            <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:"var(--space-3)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "var(--space-3)" }}>
               <div>
                 <label className="fe-label">URL zdjęcia</label>
                 <input className="fe-input" placeholder="https://…" value={frame.image_src ?? ""} onChange={f("image_src")}/>
@@ -129,13 +132,13 @@ function FrameEditor({
 
           {/* Podgląd zdjęcia */}
           {frame.image_src && (
-            <div style={{ borderRadius:"var(--radius-lg)", overflow:"hidden", maxHeight:160, background:"var(--color-surface-offset)" }}>
+            <div style={{ borderRadius: "var(--radius-lg)", overflow: "hidden", maxHeight: 160, background: "var(--color-surface-offset)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={frame.image_src} alt="" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }}/>
+              <img src={frame.image_src} alt="" style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}/>
             </div>
           )}
 
-          {/* Samolot (photo/burst) */}
+          {/* Samolot */}
           {(frame.type === "photo" || frame.type === "burst") && (
             <div>
               <label className="fe-label">Samolot / obiekt</label>
@@ -153,14 +156,14 @@ function FrameEditor({
               <textarea className="fe-input" rows={3} placeholder="Ciekawy fakt…"
                 value={frame.fact_text ?? ""}
                 onChange={e => onChange(frame.id, { fact_text: e.target.value || null })}
-                style={{ resize:"vertical" }}/>
+                style={{ resize: "vertical" }}/>
             ) : frame.type === "stat" ? (
               <input className="fe-input" placeholder="np. 47" value={frame.stat_value ?? ""} onChange={f("stat_value")}/>
             ) : (
               <textarea className="fe-input" rows={2} placeholder="Podpis klatki…"
                 value={frame.caption ?? ""}
                 onChange={e => onChange(frame.id, { caption: e.target.value || null })}
-                style={{ resize:"vertical" }}/>
+                style={{ resize: "vertical" }}/>
             )}
           </div>
 
@@ -187,22 +190,30 @@ function FrameEditor({
 
 // ── PAGE ─────────────────────────────────────────────────────
 export default function StoryEditorPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id }  = use(params);
-  const router  = useRouter();
+  const { id } = use(params);
+  const router = useRouter();
 
   const [story,   setStory]   = useState<Story | null>(null);
   const [frames,  setFrames]  = useState<Frame[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [adding,  setAdding]  = useState(false);
-  const [meta, setMeta]       = useState({ title:"", subtitle:"", accent_color:"#01696f", published:false });
+  const [error,   setError]   = useState<string | null>(null);
+  const [saved,   setSaved]   = useState(false);
+  const [meta, setMeta] = useState({
+    title: "", subtitle: "", accent_color: "#cc1f1f", published: false,
+  });
 
   useEffect(() => { load(); }, [id]);
 
   async function load() {
     setLoading(true);
-    const res = await fetch(`/api/stories/${id}`, { headers: { "x-admin-secret": ADMIN } });
-    if (!res.ok) { router.push("/admin/stories"); return; }
+    setError(null);
+    const res = await fetch(`/api/stories/${id}`);
+    if (!res.ok) {
+      router.push("/admin/stories");
+      return;
+    }
     const data: Story = await res.json();
     setStory(data);
     setMeta({ title: data.title, subtitle: data.subtitle ?? "", accent_color: data.accent_color, published: data.published });
@@ -210,12 +221,10 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
     setLoading(false);
   }
 
-  // Edycja klatki lokalnie
   function updateFrame(fid: string, patch: Partial<Frame>) {
     setFrames(prev => prev.map(f => f.id === fid ? { ...f, ...patch, _dirty: true } : f));
   }
 
-  // Zmiana kolejności
   function moveFrame(fid: string, dir: -1 | 1) {
     setFrames(prev => {
       const arr = [...prev];
@@ -227,22 +236,23 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
     });
   }
 
-  // Usunięcie klatki
   async function deleteFrame(fid: string) {
     if (!confirm("Usunąć klatkę?")) return;
-    await fetch(`/api/story-frames/${fid}`, {
-      method: "DELETE",
-      headers: { "x-admin-secret": ADMIN },
-    });
+    const res = await fetch(`/api/story-frames/${fid}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Nie udało się usunąć klatki");
+      return;
+    }
     setFrames(prev => prev.filter(f => f.id !== fid));
   }
 
-  // Dodanie nowej klatki
   async function addFrame(type: FrameType) {
     setAdding(true);
+    setError(null);
     const res = await fetch("/api/story-frames", {
       method:  "POST",
-      headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN },
+      headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({
         story_id:   id,
         type,
@@ -253,18 +263,22 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
     if (res.ok) {
       const [created] = await res.json();
       setFrames(prev => [...prev, { ...created, _dirty: false }]);
+    } else {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? `Błąd ${res.status} — sprawdź czy jesteś zalogowany`);
     }
     setAdding(false);
   }
 
-  // Zapisz wszystkie zmienione klatki + meta
   async function saveAll() {
     setSaving(true);
+    setError(null);
+    setSaved(false);
 
     // 1. Meta relacji
-    await fetch(`/api/stories/${id}`, {
+    const metaRes = await fetch(`/api/stories/${id}`, {
       method:  "PATCH",
-      headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN },
+      headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({
         title:        meta.title,
         subtitle:     meta.subtitle || null,
@@ -273,12 +287,19 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
       }),
     });
 
+    if (!metaRes.ok) {
+      const body = await metaRes.json().catch(() => ({}));
+      setError(body.error ?? `Błąd ${metaRes.status} przy zapisie relacji`);
+      setSaving(false);
+      return;
+    }
+
     // 2. Zmienione klatki (równolegle)
     const dirty = frames.filter(f => f._dirty);
-    await Promise.all(dirty.map(f =>
+    const results = await Promise.all(dirty.map(f =>
       fetch(`/api/story-frames/${f.id}`, {
         method:  "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN },
+        headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
           type:            f.type,
           image_src:       f.image_src,
@@ -296,62 +317,91 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
       })
     ));
 
-    setFrames(prev => prev.map(f => ({ ...f, _dirty: false })));
+    const failed = results.filter(r => !r.ok);
+    if (failed.length > 0) {
+      setError(`${failed.length} klatek nie udało się zapisać`);
+    } else {
+      setFrames(prev => prev.map(f => ({ ...f, _dirty: false })));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    }
+
     setSaving(false);
   }
 
   const dirtyCount = frames.filter(f => f._dirty).length;
 
   if (loading) return (
-    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"60vh" }}>
-      <Loader2 size={32} style={{ animation:"spin 1s linear infinite", color:"var(--color-text-faint)" }}/>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
+      <Loader2 size={32} style={{ animation: "spin 1s linear infinite", color: "var(--color-text-faint)" }}/>
     </div>
   );
 
   return (
     <>
       <style>{`
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .fe-label{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint);margin-bottom:var(--space-1);display:block}
-        .fe-input{width:100%;padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-surface-offset);font-size:var(--text-sm);color:var(--color-text)}
-        .fe-input:focus{outline:2px solid var(--color-primary);border-color:transparent}
-        .fe-btn{display:inline-flex;align-items:center;justify-content:center;padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text);font-size:var(--text-xs);cursor:pointer;transition:background .15s}
-        .fe-btn:disabled{opacity:.35;cursor:not-allowed}
-        .fe-btn:hover:not(:disabled){background:var(--color-surface-offset)}
-        .fe-btn.danger:hover:not(:disabled){background:var(--color-error-highlight);color:var(--color-error);border-color:var(--color-error)}
-        .fe-btn.primary{background:var(--color-primary);color:#fff;border-color:transparent;padding:var(--space-2) var(--space-4);font-weight:600}
-        .fe-btn.primary:hover:not(:disabled){background:var(--color-primary-hover)}
-        .fe-page{max-width:var(--content-default);margin:0 auto;padding:var(--space-8)}
-        @media(max-width:640px){.fe-page{padding:var(--space-5)}}
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes slideDown { from { opacity:0; transform:translateY(-6px) } to { opacity:1; transform:translateY(0) } }
+        .fe-label { font-size:var(--text-xs); font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--color-text-faint); margin-bottom:var(--space-1); display:block }
+        .fe-input { width:100%; padding:var(--space-2) var(--space-3); border-radius:var(--radius-md); border:1px solid var(--color-border); background:var(--color-surface-offset); font-size:var(--text-sm); color:var(--color-text); outline:none; transition:border-color .15s,box-shadow .15s }
+        .fe-input:focus { border-color:var(--color-primary); box-shadow:0 0 0 3px oklch(from var(--color-primary) l c h / .15) }
+        .fe-btn { display:inline-flex; align-items:center; justify-content:center; padding:var(--space-1) var(--space-2); border-radius:var(--radius-sm); border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); font-size:var(--text-xs); cursor:pointer; transition:background .15s }
+        .fe-btn:disabled { opacity:.35; cursor:not-allowed }
+        .fe-btn:hover:not(:disabled) { background:var(--color-surface-offset) }
+        .fe-btn.danger:hover:not(:disabled) { background:var(--color-error-highlight); color:var(--color-error); border-color:var(--color-error) }
+        .fe-btn.primary { background:var(--color-primary); color:#fff; border-color:transparent; padding:var(--space-2) var(--space-4); font-weight:600; gap:var(--space-2) }
+        .fe-btn.primary:hover:not(:disabled) { background:var(--color-primary-hover) }
+        .fe-page { max-width:var(--content-default); margin:0 auto; padding:var(--space-8) }
+        @media(max-width:640px) { .fe-page { padding:var(--space-5) } }
+        .fe-alert { display:flex; align-items:center; gap:var(--space-3); padding:var(--space-3) var(--space-4); border-radius:var(--radius-lg); font-size:var(--text-sm); font-weight:500; margin-bottom:var(--space-5); animation:slideDown .2s ease }
+        .fe-alert.error { background:rgba(161,44,123,.08); border:1px solid rgba(161,44,123,.25); color:#a12c7b }
+        .fe-alert.success { background:rgba(67,122,34,.08); border:1px solid rgba(67,122,34,.25); color:#437a22 }
       `}</style>
 
       <div className="fe-page">
         {/* Header */}
-        <div style={{ display:"flex", alignItems:"center", gap:"var(--space-4)", marginBottom:"var(--space-8)", flexWrap:"wrap" }}>
-          <button className="fe-btn" onClick={() => router.push("/admin/stories")} style={{ gap:"var(--space-2)", display:"flex", alignItems:"center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", marginBottom: "var(--space-6)", flexWrap: "wrap" }}>
+          <button className="fe-btn" onClick={() => router.push("/admin/stories")} style={{ gap: "var(--space-2)", display: "flex", alignItems: "center" }}>
             <ArrowLeft size={14}/> Relacje
           </button>
-          <div style={{ flex:1 }}>
-            <h1 style={{ fontFamily:"var(--font-display)", fontWeight:900, fontSize:"var(--text-xl)", letterSpacing:"-0.03em" }}>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-xl)", letterSpacing: "-0.03em" }}>
               {story?.title}
             </h1>
-            <p style={{ fontSize:"var(--text-xs)", color:"var(--color-text-faint)", marginTop:2 }}>
+            <p style={{ fontSize: "var(--text-xs)", color: "var(--color-text-faint)", marginTop: 2 }}>
               {frames.length} klatek
-              {dirtyCount > 0 && <span style={{ color:"var(--color-warning)", marginLeft:"var(--space-2)" }}>· {dirtyCount} niezapisanych</span>}
+              {dirtyCount > 0 && (
+                <span style={{ color: "var(--color-warning)", marginLeft: "var(--space-2)" }}>· {dirtyCount} niezapisanych</span>
+              )}
             </p>
           </div>
           <button className="fe-btn primary" onClick={saveAll} disabled={saving}>
             {saving
-              ? <><Loader2 size={14} style={{ animation:"spin 1s linear infinite" }}/> Zapisywanie…</>
+              ? <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }}/> Zapisywanie…</>
               : <><Save size={14}/> Zapisz wszystko</>
             }
           </button>
         </div>
 
+        {/* Alerty */}
+        {error && (
+          <div className="fe-alert error">
+            <AlertCircle size={16} style={{ flexShrink: 0 }}/>
+            <span>{error}</span>
+            <button onClick={() => setError(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "inherit", display: "flex" }}>✕</button>
+          </div>
+        )}
+        {saved && (
+          <div className="fe-alert success">
+            <span>✓</span>
+            <span>Zapisano wszystkie zmiany!</span>
+          </div>
+        )}
+
         {/* Meta relacji */}
-        <div style={{ background:"var(--color-surface)", border:"1px solid var(--color-border)", borderRadius:"var(--radius-xl)", padding:"var(--space-6)", marginBottom:"var(--space-8)" }}>
-          <p className="fe-label" style={{ marginBottom:"var(--space-4)" }}>Ustawienia relacji</p>
-          <div style={{ display:"grid", gridTemplateColumns:"2fr 2fr auto auto", gap:"var(--space-4)", alignItems:"end" }}>
+        <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-xl)", padding: "var(--space-6)", marginBottom: "var(--space-6)" }}>
+          <p className="fe-label" style={{ marginBottom: "var(--space-4)" }}>Ustawienia relacji</p>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr auto auto", gap: "var(--space-4)", alignItems: "end" }}>
             <div>
               <label className="fe-label">Tytuł *</label>
               <input className="fe-input" value={meta.title}
@@ -364,28 +414,29 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
             </div>
             <div>
               <label className="fe-label">Kolor akcentu</label>
-              <div style={{ display:"flex", gap:"var(--space-2)", alignItems:"center" }}>
+              <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
                 <input type="color" value={meta.accent_color}
                   onChange={e => setMeta(m => ({ ...m, accent_color: e.target.value }))}
-                  style={{ width:40, height:38, border:"1px solid var(--color-border)", borderRadius:"var(--radius-md)", padding:2, cursor:"pointer", background:"none" }}/>
-                <input className="fe-input" value={meta.accent_color} style={{ fontFamily:"monospace", fontSize:12, width:90 }}
+                  style={{ width: 40, height: 38, border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: 2, cursor: "pointer", background: "none" }}/>
+                <input className="fe-input" value={meta.accent_color}
+                  style={{ fontFamily: "monospace", fontSize: 12, width: 90 }}
                   onChange={e => setMeta(m => ({ ...m, accent_color: e.target.value }))}/>
               </div>
             </div>
             <div>
               <label className="fe-label">Status</label>
-              <label style={{ display:"flex", alignItems:"center", gap:"var(--space-2)", cursor:"pointer", height:38 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer", height: 38 }}>
                 <input type="checkbox" checked={meta.published}
                   onChange={e => setMeta(m => ({ ...m, published: e.target.checked }))}
-                  style={{ width:16, height:16, cursor:"pointer" }}/>
-                <span style={{ fontSize:"var(--text-sm)", fontWeight:600 }}>Opublikowana</span>
+                  style={{ width: 16, height: 16, cursor: "pointer" }}/>
+                <span style={{ fontSize: "var(--text-sm)", fontWeight: 600 }}>Opublikowana</span>
               </label>
             </div>
           </div>
         </div>
 
         {/* Klatki */}
-        <div style={{ display:"flex", flexDirection:"column", gap:"var(--space-4)", marginBottom:"var(--space-6)" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
           {frames.map((frame, i) => (
             <FrameEditor
               key={frame.id}
@@ -398,27 +449,27 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
             />
           ))}
           {frames.length === 0 && (
-            <div style={{ padding:"var(--space-12)", textAlign:"center", border:"2px dashed var(--color-border)", borderRadius:"var(--radius-xl)", color:"var(--color-text-faint)" }}>
-              <ImageIcon size={32} style={{ margin:"0 auto var(--space-3)", opacity:.3 }}/>
-              <p style={{ fontSize:"var(--text-sm)" }}>Brak klatek. Dodaj pierwszą poniżej.</p>
+            <div style={{ padding: "var(--space-12)", textAlign: "center", border: "2px dashed var(--color-border)", borderRadius: "var(--radius-xl)", color: "var(--color-text-faint)" }}>
+              <ImageIcon size={32} style={{ margin: "0 auto var(--space-3)", opacity: .3 }}/>
+              <p style={{ fontSize: "var(--text-sm)" }}>Brak klatek. Dodaj pierwszą poniżej.</p>
             </div>
           )}
         </div>
 
         {/* Dodaj klatkę */}
-        <div style={{ background:"var(--color-surface)", border:"1px solid var(--color-border)", borderRadius:"var(--radius-xl)", padding:"var(--space-5)" }}>
-          <p className="fe-label" style={{ marginBottom:"var(--space-3)" }}>Dodaj klatkę</p>
-          <div style={{ display:"flex", gap:"var(--space-3)", flexWrap:"wrap" }}>
+        <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-xl)", padding: "var(--space-5)" }}>
+          <p className="fe-label" style={{ marginBottom: "var(--space-3)" }}>Dodaj klatkę</p>
+          <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
             {FRAME_TYPES.map(t => (
               <button
                 key={t.value}
                 className="fe-btn"
                 onClick={() => addFrame(t.value)}
                 disabled={adding}
-                style={{ display:"flex", alignItems:"center", gap:"var(--space-2)", padding:"var(--space-2) var(--space-4)" }}
+                style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", padding: "var(--space-2) var(--space-4)" }}
                 title={t.desc}
               >
-                {adding ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }}/> : t.icon}
+                {adding ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }}/> : t.icon}
                 {t.label}
               </button>
             ))}

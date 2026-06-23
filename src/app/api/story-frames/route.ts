@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
+function isAdmin(req: NextRequest) {
+  return req.cookies.get("admin_session")?.value === "true";
+}
+
 export async function POST(req: NextRequest) {
-  const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
-  if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const frames = Array.isArray(body) ? body : [body];

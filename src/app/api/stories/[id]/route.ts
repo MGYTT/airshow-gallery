@@ -4,13 +4,17 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Ctx) {
-  const { id } = await params;
+function isAdmin(req: NextRequest) {
+  return req.cookies.get("admin_session")?.value === "true";
+}
 
-  // GET — anon client, RLS pozwala czytać opublikowane
+export async function GET(req: NextRequest, { params }: Ctx) {
+  const { id } = await params;
+  const admin  = isAdmin(req);
+
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  const query = supabase
     .from("stories")
     .select(`
       id, show_id, title, subtitle, cover_image,
@@ -23,8 +27,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       )
     `)
     .eq("id", id)
-    .order("sort_order", { ascending: true, referencedTable: "story_frames" })
-    .single();
+    .order("sort_order", { ascending: true, referencedTable: "story_frames" });
+
+  const { data, error } = await (admin ? query : query.eq("published", true)).single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
   return NextResponse.json(data);
@@ -32,12 +37,10 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   const { id } = await params;
-  const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
-  if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
 
-  // PATCH — service role
   const { data, error } = await supabaseAdmin
     .from("stories")
     .update(body)
@@ -51,10 +54,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
 export async function DELETE(req: NextRequest, { params }: Ctx) {
   const { id } = await params;
-  const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
-  if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // DELETE — service role
   const { error } = await supabaseAdmin
     .from("stories")
     .delete()

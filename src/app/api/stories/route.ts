@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
+function isAdmin(req: NextRequest) {
+  return req.cookies.get("admin_session")?.value === "true";
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const showId  = searchParams.get("show_id");
-  const all     = searchParams.get("all") === "true";
-  const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
+  const showId = searchParams.get("show_id");
+  const all    = searchParams.get("all") === "true";
+  const admin  = isAdmin(req);
 
-  // GET — anon client wystarczy (RLS pozwala na SELECT published)
   const supabase = await createClient();
 
   let query = supabase
@@ -26,7 +29,7 @@ export async function GET(req: NextRequest) {
     .order("sort_order", { ascending: true })
     .order("sort_order", { ascending: true, referencedTable: "story_frames" });
 
-  if (!isAdmin || !all) query = query.eq("published", true);
+  if (!admin || !all) query = query.eq("published", true);
   if (showId) query = query.eq("show_id", showId);
 
   const { data, error } = await query;
@@ -35,12 +38,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
-  if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
 
-  // POST — musi używać service role (admin), bo RLS blokuje anon INSERT
   const { data, error } = await supabaseAdmin
     .from("stories")
     .insert({
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       title:        body.title,
       subtitle:     body.subtitle     ?? null,
       cover_image:  body.cover_image  ?? null,
-      accent_color: body.accent_color ?? "#01696f",
+      accent_color: body.accent_color ?? "#cc1f1f",
       published:    body.published    ?? false,
       sort_order:   body.sort_order   ?? 0,
     })

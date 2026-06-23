@@ -4,26 +4,24 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Plus, Pencil, Trash2, Eye, EyeOff,
-  Images, GripVertical, Loader2,
+  Images, GripVertical, Loader2, AlertCircle,
 } from "lucide-react";
 
 interface Story {
-  id:          string;
-  show_id:     string;
-  title:       string;
-  subtitle:    string | null;
-  cover_image: string | null;
+  id:           string;
+  show_id:      string;
+  title:        string;
+  subtitle:     string | null;
+  cover_image:  string | null;
   accent_color: string;
-  published:   boolean;
-  sort_order:  number;
-  views:       number;
-  created_at:  string;
+  published:    boolean;
+  sort_order:   number;
+  views:        number;
+  created_at:   string;
   story_frames: { id: string }[];
 }
 
 interface AirShow { id: string; name: string; year: number; }
-
-const ADMIN = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "";
 
 export default function AdminStoriesPage() {
   const [stories,  setStories]  = useState<Story[]>([]);
@@ -31,39 +29,57 @@ export default function AdminStoriesPage() {
   const [loading,  setLoading]  = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+  const [success,  setSuccess]  = useState<string | null>(null);
 
-  // Nowa relacja — formularz
   const [form, setForm] = useState({
     show_id:      "",
     title:        "",
     subtitle:     "",
-    accent_color: "#01696f",
+    accent_color: "#cc1f1f",
   });
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     setLoading(true);
-    const [sr, sr2] = await Promise.all([
-      fetch("/api/stories?all=true", { headers: { "x-admin-secret": ADMIN } }),
-      fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/air_shows?select=id,name,year&order=year.desc`, {
-        headers: {
-          apikey:        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
-        },
-      }),
-    ]);
-    if (sr.ok)  setStories(await sr.json());
-    if (sr2.ok) setShows(await sr2.json());
-    setLoading(false);
+    setError(null);
+    try {
+      const [sr, sr2] = await Promise.all([
+        fetch("/api/stories?all=true"),
+        fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/air_shows?select=id,name,year&order=year.desc`, {
+          headers: {
+            apikey:        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+          },
+        }),
+      ]);
+
+      if (!sr.ok) {
+        const body = await sr.json().catch(() => ({}));
+        throw new Error(body.error ?? `Błąd ${sr.status} przy ładowaniu relacji`);
+      }
+
+      setStories(await sr.json());
+      if (sr2.ok) setShows(await sr2.json());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Nieznany błąd");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function togglePublish(story: Story) {
-    await fetch(`/api/stories/${story.id}`, {
+    const res = await fetch(`/api/stories/${story.id}`, {
       method:  "PATCH",
-      headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN },
+      headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ published: !story.published }),
     });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Nie udało się zmienić statusu");
+      return;
+    }
     setStories(prev => prev.map(s =>
       s.id === story.id ? { ...s, published: !s.published } : s
     ));
@@ -72,31 +88,42 @@ export default function AdminStoriesPage() {
   async function deleteStory(id: string) {
     if (!confirm("Usunąć relację wraz ze wszystkimi klatkami?")) return;
     setDeleting(id);
-    await fetch(`/api/stories/${id}`, {
-      method:  "DELETE",
-      headers: { "x-admin-secret": ADMIN },
-    });
-    setStories(prev => prev.filter(s => s.id !== id));
+    const res = await fetch(`/api/stories/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Nie udało się usunąć relacji");
+    } else {
+      setStories(prev => prev.filter(s => s.id !== id));
+    }
     setDeleting(null);
   }
 
   async function createStory(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.show_id || !form.title) return;
+    if (!form.show_id || !form.title.trim()) return;
     setCreating(true);
+    setError(null);
+    setSuccess(null);
+
     const res = await fetch("/api/stories", {
       method:  "POST",
-      headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN },
+      headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({
         show_id:      form.show_id,
-        title:        form.title,
-        subtitle:     form.subtitle || null,
+        title:        form.title.trim(),
+        subtitle:     form.subtitle.trim() || null,
         accent_color: form.accent_color,
         published:    false,
       }),
     });
-    if (res.ok) {
-      setForm({ show_id: "", title: "", subtitle: "", accent_color: "#01696f" });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? `Błąd ${res.status} — sprawdź czy jesteś zalogowany`);
+    } else {
+      setForm({ show_id: "", title: "", subtitle: "", accent_color: "#cc1f1f" });
+      setSuccess("Relacja została utworzona!");
+      setTimeout(() => setSuccess(null), 3000);
       await load();
     }
     setCreating(false);
@@ -108,28 +135,36 @@ export default function AdminStoriesPage() {
   return (
     <>
       <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
         .as-page{padding:var(--space-8);max-width:var(--content-wide);margin:0 auto}
         .as-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-8);flex-wrap:wrap;gap:var(--space-4)}
         .as-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);overflow:hidden}
-        .as-form{padding:var(--space-6);border-bottom:1px solid var(--color-divider);display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:var(--space-3);align-items:end}
-        @media(max-width:768px){.as-form{grid-template-columns:1fr}}
+        .as-form{padding:var(--space-6);border-bottom:1px solid var(--color-divider);display:grid;grid-template-columns:1.5fr 2fr 1.5fr auto auto;gap:var(--space-3);align-items:end}
+        @media(max-width:900px){.as-form{grid-template-columns:1fr 1fr}}
+        @media(max-width:600px){.as-form{grid-template-columns:1fr}}
         .as-label{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint);margin-bottom:var(--space-1);display:block}
-        .as-input{width:100%;padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-surface-offset);font-size:var(--text-sm);color:var(--color-text)}
-        .as-input:focus{outline:2px solid var(--color-primary);border-color:transparent}
-        .as-row{display:grid;grid-template-columns:40px 1fr 140px 80px 80px 100px 90px;gap:var(--space-3);align-items:center;padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-divider);transition:background .15s}
+        .as-input{width:100%;padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border-strong);background:var(--color-surface-offset);font-size:var(--text-sm);color:var(--color-text);outline:none;transition:border-color .15s,box-shadow .15s}
+        .as-input:focus{border-color:var(--color-accent);box-shadow:var(--focus-ring)}
+        .as-row{display:grid;grid-template-columns:40px 1fr 160px 70px 70px 90px 100px;gap:var(--space-3);align-items:center;padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-divider);transition:background .15s}
         .as-row:last-child{border-bottom:none}
         .as-row:hover{background:var(--color-surface-offset)}
-        @media(max-width:900px){.as-row{grid-template-columns:1fr auto;flex-wrap:wrap}}
-        .as-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.06em}
-        .as-badge.pub{background:var(--color-success-highlight);color:var(--color-success)}
+        @media(max-width:900px){.as-row{grid-template-columns:1fr auto}}
+        .as-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+        .as-badge.pub{background:rgba(67,122,34,.12);color:#437a22}
         .as-badge.draft{background:var(--color-surface-offset);color:var(--color-text-faint)}
-        .as-btn{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);font-size:var(--text-xs);font-weight:600;border:1px solid var(--color-border);cursor:pointer;background:var(--color-surface);color:var(--color-text);transition:background .15s,color .15s}
+        .as-btn{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);font-size:var(--text-xs);font-weight:600;border:1px solid var(--color-border);cursor:pointer;background:var(--color-surface);color:var(--color-text);transition:background .15s,color .15s,border-color .15s;white-space:nowrap}
         .as-btn:hover{background:var(--color-surface-offset)}
-        .as-btn.danger:hover{background:var(--color-error-highlight);color:var(--color-error);border-color:var(--color-error)}
-        .as-btn.primary{background:var(--color-primary);color:#fff;border-color:transparent}
-        .as-btn.primary:hover{background:var(--color-primary-hover)}
+        .as-btn:disabled{opacity:.5;cursor:not-allowed}
+        .as-btn.danger:hover{background:rgba(161,44,123,.1);color:#a12c7b;border-color:#a12c7b}
+        .as-btn.primary{background:var(--color-accent);color:#fff;border-color:transparent}
+        .as-btn.primary:hover:not(:disabled){background:var(--color-accent-hover)}
         .as-empty{padding:var(--space-16);text-align:center;color:var(--color-text-faint);font-size:var(--text-sm)}
         .as-accent-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,.1)}
+        .as-alert{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-lg);font-size:var(--text-sm);font-weight:500;margin-bottom:var(--space-5);animation:slideDown .2s ease}
+        .as-alert.error{background:rgba(161,44,123,.08);border:1px solid rgba(161,44,123,.25);color:#a12c7b}
+        .as-alert.success{background:rgba(67,122,34,.08);border:1px solid rgba(67,122,34,.25);color:#437a22}
+        .as-th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint)}
       `}</style>
 
       <div className="as-page">
@@ -143,10 +178,23 @@ export default function AdminStoriesPage() {
               {stories.length} relacji · {stories.filter(s => s.published).length} opublikowanych
             </p>
           </div>
-          <Link href="/admin" className="as-btn">
-            ← Panel admina
-          </Link>
+          <Link href="/admin" className="as-btn">← Panel admina</Link>
         </div>
+
+        {/* Alerty */}
+        {error && (
+          <div className="as-alert error">
+            <AlertCircle size={16} style={{ flexShrink:0 }}/>
+            <span>{error}</span>
+            <button onClick={() => setError(null)} style={{ marginLeft:"auto", background:"none", border:"none", cursor:"pointer", color:"inherit", display:"flex" }}>✕</button>
+          </div>
+        )}
+        {success && (
+          <div className="as-alert success">
+            <span>✓</span>
+            <span>{success}</span>
+          </div>
+        )}
 
         <div className="as-card">
           {/* Formularz tworzenia */}
@@ -191,20 +239,22 @@ export default function AdminStoriesPage() {
                   type="color"
                   value={form.accent_color}
                   onChange={e => setForm(f => ({ ...f, accent_color: e.target.value }))}
-                  style={{ width:40, height:36, border:"1px solid var(--color-border)", borderRadius:"var(--radius-md)", padding:2, cursor:"pointer", background:"none" }}
+                  style={{ width:40, height:38, border:"1px solid var(--color-border)", borderRadius:"var(--radius-md)", padding:2, cursor:"pointer", background:"none", flexShrink:0 }}
                 />
                 <input
                   className="as-input"
                   value={form.accent_color}
                   onChange={e => setForm(f => ({ ...f, accent_color: e.target.value }))}
-                  style={{ fontFamily:"monospace", fontSize:12 }}
+                  style={{ fontFamily:"monospace", fontSize:12, width:90 }}
                 />
               </div>
             </div>
             <div style={{ paddingTop:20 }}>
-              <button type="submit" className="as-btn primary" disabled={creating}>
-                {creating ? <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }}/> : <Plus size={14}/>}
-                Utwórz
+              <button type="submit" className="as-btn primary" disabled={creating || !form.show_id || !form.title.trim()}>
+                {creating
+                  ? <><Loader2 size={14} style={{ animation:"spin 1s linear infinite" }}/> Tworzenie…</>
+                  : <><Plus size={14}/> Utwórz</>
+                }
               </button>
             </div>
           </form>
@@ -222,20 +272,18 @@ export default function AdminStoriesPage() {
           ) : (
             <div>
               {/* Nagłówek tabeli */}
-              <div style={{ display:"grid", gridTemplateColumns:"40px 1fr 140px 80px 80px 100px 90px", gap:"var(--space-3)", padding:"var(--space-2) var(--space-5)", borderBottom:"2px solid var(--color-divider)" }}>
-                {["", "Tytuł", "Pokaz", "Klatki", "Odsłony", "Status", "Akcje"].map(h => (
-                  <span key={h} style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"var(--color-text-faint)" }}>{h}</span>
+              <div style={{ display:"grid", gridTemplateColumns:"40px 1fr 160px 70px 70px 90px 100px", gap:"var(--space-3)", padding:"var(--space-2) var(--space-5)", borderBottom:"2px solid var(--color-divider)" }}>
+                {["", "Tytuł", "Pokaz", "Klatki", "Odsł.", "Status", "Akcje"].map(h => (
+                  <span key={h} className="as-th">{h}</span>
                 ))}
               </div>
 
               {stories.map(story => (
                 <div key={story.id} className="as-row">
-                  {/* Grip */}
                   <div style={{ color:"var(--color-text-faint)", cursor:"grab" }}>
                     <GripVertical size={16}/>
                   </div>
 
-                  {/* Tytuł */}
                   <div style={{ minWidth:0 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:"var(--space-2)" }}>
                       <div className="as-accent-dot" style={{ background:story.accent_color }}/>
@@ -250,34 +298,24 @@ export default function AdminStoriesPage() {
                     )}
                   </div>
 
-                  {/* Pokaz */}
                   <p style={{ fontSize:"var(--text-xs)", color:"var(--color-text-muted)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                     {showName(story.show_id)}
                   </p>
 
-                  {/* Klatki */}
                   <p style={{ fontSize:"var(--text-sm)", fontWeight:700, fontVariantNumeric:"tabular-nums" }}>
                     {story.story_frames?.length ?? 0}
                   </p>
 
-                  {/* Odsłony */}
                   <p style={{ fontSize:"var(--text-sm)", fontVariantNumeric:"tabular-nums", color:"var(--color-text-muted)" }}>
                     {story.views}
                   </p>
 
-                  {/* Status */}
                   <span className={`as-badge ${story.published ? "pub" : "draft"}`}>
                     {story.published ? <><Eye size={10}/> Pub.</> : <><EyeOff size={10}/> Szkic</>}
                   </span>
 
-                  {/* Akcje */}
                   <div style={{ display:"flex", gap:"var(--space-1)" }}>
-                    <Link
-                      href={`/admin/stories/${story.id}`}
-                      className="as-btn"
-                      title="Edytuj klatki"
-                      style={{ padding:"var(--space-2)" }}
-                    >
+                    <Link href={`/admin/stories/${story.id}`} className="as-btn" title="Edytuj klatki" style={{ padding:"var(--space-2)" }}>
                       <Pencil size={13}/>
                     </Link>
                     <button
@@ -307,8 +345,6 @@ export default function AdminStoriesPage() {
           )}
         </div>
       </div>
-
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </>
   );
 }
