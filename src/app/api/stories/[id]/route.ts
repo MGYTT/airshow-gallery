@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
   const { id } = await params;
+
+  // GET — anon client, RLS pozwala czytać opublikowane
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -32,10 +35,10 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = await createClient();
   const body = await req.json();
 
-  const { data, error } = await supabase
+  // PATCH — service role
+  const { data, error } = await supabaseAdmin
     .from("stories")
     .update(body)
     .eq("id", id)
@@ -51,8 +54,12 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
   const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("stories").delete().eq("id", id);
+  // DELETE — service role
+  const { error } = await supabaseAdmin
+    .from("stories")
+    .delete()
+    .eq("id", id);
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

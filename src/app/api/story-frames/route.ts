@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
   const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = await createClient();
   const body = await req.json();
-
-  // Bulk insert — przyjmuje tablicę lub pojedynczy obiekt
   const frames = Array.isArray(body) ? body : [body];
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("story_frames")
     .insert(
       frames.map((f, i) => ({

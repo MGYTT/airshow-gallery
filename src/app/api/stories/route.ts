@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
   const { searchParams } = new URL(req.url);
-  const showId   = searchParams.get("show_id");
-  const all      = searchParams.get("all") === "true";
-  const isAdmin  = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
+  const showId  = searchParams.get("show_id");
+  const all     = searchParams.get("all") === "true";
+  const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
+
+  // GET — anon client wystarczy (RLS pozwala na SELECT published)
+  const supabase = await createClient();
 
   let query = supabase
     .from("stories")
@@ -23,7 +26,6 @@ export async function GET(req: NextRequest) {
     .order("sort_order", { ascending: true })
     .order("sort_order", { ascending: true, referencedTable: "story_frames" });
 
-  // Publiczny dostęp — tylko opublikowane
   if (!isAdmin || !all) query = query.eq("published", true);
   if (showId) query = query.eq("show_id", showId);
 
@@ -36,10 +38,10 @@ export async function POST(req: NextRequest) {
   const isAdmin = req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
   if (!isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = await createClient();
   const body = await req.json();
 
-  const { data, error } = await supabase
+  // POST — musi używać service role (admin), bo RLS blokuje anon INSERT
+  const { data, error } = await supabaseAdmin
     .from("stories")
     .insert({
       show_id:      body.show_id,
