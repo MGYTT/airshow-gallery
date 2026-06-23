@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Calendar, MapPin, CheckCircle2, Clock, Globe,
-  ChevronRight, ArrowLeft, Plane, AlertCircle,
+  ChevronRight, ArrowLeft, Plane, AlertCircle, Star,
 } from "lucide-react";
 
-// ── Dane ─────────────────────────────────────────────────────
+// ── Typy ─────────────────────────────────────────────────────
 
 type EventStatus = "done" | "soon" | "upcoming";
 type EventTab    = "polska" | "zagranica";
@@ -16,177 +16,143 @@ interface AirEvent {
   name:     string;
   location: string;
   date:     string;
-  dateSort: string; // YYYY-MM-DD dla sortowania
+  dateSort: string;
   status:   EventStatus;
   tab:      EventTab;
   note?:    string;
 }
 
+// ── Dane ─────────────────────────────────────────────────────
+
 const EVENTS: AirEvent[] = [
-  // ── Polska — Odbyte ──
-  { name: "Pokazy Lotnicze Air SKY",        location: "Piastów",              date: "25 kwietnia 2026",     dateSort: "2026-04-25", status: "done",     tab: "polska" },
-  { name: "Aerosploty",                     location: "Bielsko-Biała",        date: "2 maja 2026",          dateSort: "2026-05-02", status: "done",     tab: "polska" },
-  { name: "Świdnik Air Festival",           location: "Świdnik",              date: "13 czerwca 2026",      dateSort: "2026-06-13", status: "done",     tab: "polska" },
-  { name: "ANTIDOTUM Airshow Leszno",       location: "Leszno",               date: "19–20 czerwca 2026",   dateSort: "2026-06-19", status: "done",     tab: "polska" },
-
-  // ── Polska — Nadchodzące ──
-  { name: "Odlotowe Suwałki Air Show",      location: "Suwałki",              date: "27–28 czerwca 2026",   dateSort: "2026-06-27", status: "soon",     tab: "polska" },
-  { name: "Fly Fest",                       location: "Piotrków Trybunalski", date: "4–5 lipca 2026",       dateSort: "2026-07-04", status: "upcoming", tab: "polska" },
-  { name: "Nowotarski Piknik Lotniczy",     location: "Nowy Targ",            date: "4–5 lipca 2026",       dateSort: "2026-07-04", status: "upcoming", tab: "polska" },
-  { name: "Rodzinny Piknik Lotniczy",       location: "Gryźliny",             date: "4–5 lipca 2026",       dateSort: "2026-07-04", status: "upcoming", tab: "polska" },
-  { name: "24. Szybowcowe Mistrzostwa Europy FAI", location: "Polska",        date: "11–25 lipca 2026",     dateSort: "2026-07-11", status: "upcoming", tab: "polska" },
-  { name: "Aeropiknik w Paczkowie",         location: "Paczków",              date: "23–25 lipca 2026",     dateSort: "2026-07-23", status: "upcoming", tab: "polska" },
-  { name: "Air Show Rudniki",               location: "Rudniki",              date: "31 lipca – 1 sierpnia 2026", dateSort: "2026-07-31", status: "upcoming", tab: "polska" },
-  { name: "Mazury AirShow",                 location: "Kętrzyn-Wilamowo",     date: "1–2 sierpnia 2026",    dateSort: "2026-08-01", status: "upcoming", tab: "polska" },
-  { name: "Płocki Piknik Lotniczy",         location: "Płock",                date: "7–8 sierpnia 2026",    dateSort: "2026-08-07", status: "upcoming", tab: "polska" },
-  { name: "Leszczyńska Noc Balonowa",       location: "Leszno",               date: "28–30 sierpnia 2026",  dateSort: "2026-08-28", status: "upcoming", tab: "polska" },
-
-  // ── Zagranica ──
-  { name: "NATO Days 2026",                 location: "Ostrawa, Czechy",      date: "19–20 września 2026",  dateSort: "2026-09-19", status: "upcoming", tab: "zagranica", note: "Blisko Polski" },
-  { name: "International Sanicole Airshow", location: "Hechtel-Eksel, Belgia", date: "12–13 września 2026", dateSort: "2026-09-12", status: "upcoming", tab: "zagranica", note: "Warte uwagi" },
+  { name: "Pokazy Lotnicze Air SKY",              location: "Piastów",               date: "25 kwietnia 2026",          dateSort: "2026-04-25", status: "done",     tab: "polska" },
+  { name: "Aerosploty",                           location: "Bielsko-Biała",          date: "2 maja 2026",               dateSort: "2026-05-02", status: "done",     tab: "polska" },
+  { name: "Świdnik Air Festival",                 location: "Świdnik",               date: "13 czerwca 2026",           dateSort: "2026-06-13", status: "done",     tab: "polska" },
+  { name: "ANTIDOTUM Airshow Leszno",             location: "Leszno",                date: "19–20 czerwca 2026",        dateSort: "2026-06-19", status: "done",     tab: "polska" },
+  { name: "Odlotowe Suwałki Air Show",            location: "Suwałki",               date: "27–28 czerwca 2026",        dateSort: "2026-06-27", status: "soon",     tab: "polska" },
+  { name: "Fly Fest",                             location: "Piotrków Trybunalski",  date: "4–5 lipca 2026",            dateSort: "2026-07-04", status: "upcoming", tab: "polska" },
+  { name: "Nowotarski Piknik Lotniczy",           location: "Nowy Targ",             date: "4–5 lipca 2026",            dateSort: "2026-07-04", status: "upcoming", tab: "polska" },
+  { name: "Rodzinny Piknik Lotniczy",             location: "Gryźliny",              date: "4–5 lipca 2026",            dateSort: "2026-07-04", status: "upcoming", tab: "polska" },
+  { name: "24. Szybowcowe Mistrzostwa Europy FAI", location: "Polska",              date: "11–25 lipca 2026",          dateSort: "2026-07-11", status: "upcoming", tab: "polska" },
+  { name: "Aeropiknik w Paczkowie",               location: "Paczków",               date: "23–25 lipca 2026",          dateSort: "2026-07-23", status: "upcoming", tab: "polska" },
+  { name: "Air Show Rudniki",                     location: "Rudniki",               date: "31 lipca – 1 sierpnia 2026",dateSort: "2026-07-31", status: "upcoming", tab: "polska" },
+  { name: "Mazury AirShow",                       location: "Kętrzyn-Wilamowo",      date: "1–2 sierpnia 2026",         dateSort: "2026-08-01", status: "upcoming", tab: "polska" },
+  { name: "Płocki Piknik Lotniczy",               location: "Płock",                 date: "7–8 sierpnia 2026",         dateSort: "2026-08-07", status: "upcoming", tab: "polska" },
+  { name: "Leszczyńska Noc Balonowa",             location: "Leszno",                date: "28–30 sierpnia 2026",       dateSort: "2026-08-28", status: "upcoming", tab: "polska" },
+  { name: "International Sanicole Airshow",       location: "Hechtel-Eksel, Belgia", date: "12–13 września 2026",       dateSort: "2026-09-12", status: "upcoming", tab: "zagranica", note: "Warte uwagi" },
+  { name: "NATO Days 2026",                       location: "Ostrawa, Czechy",       date: "19–20 września 2026",       dateSort: "2026-09-19", status: "upcoming", tab: "zagranica", note: "Blisko Polski" },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────
 
-const STATUS_CONFIG = {
-  done:     { label: "Odbyte",      color: "var(--color-text-faint)",   bg: "var(--color-surface-offset)", icon: <CheckCircle2 size={11}/> },
-  soon:     { label: "Już wkrótce", color: "var(--color-accent)",       bg: "var(--color-accent-subtle)",  icon: <AlertCircle size={11}/> },
-  upcoming: { label: "Nadchodzące", color: "var(--color-gold)",         bg: "var(--color-gold-subtle)",    icon: <Clock size={11}/> },
-};
-
-function getNextEvent(tab: EventTab) {
-  const now = new Date();
+function getNextEvent(tab: EventTab): AirEvent | undefined {
   return EVENTS
     .filter(e => e.tab === tab && e.status !== "done")
-    .sort((a, b) => a.dateSort.localeCompare(b.dateSort))
-    .find(e => new Date(e.dateSort) >= now);
+    .sort((a, b) => a.dateSort.localeCompare(b.dateSort))[0];
+}
+
+function getDaysUntil(dateSort: string): number | null {
+  const target = new Date(dateSort);
+  const now    = new Date();
+  now.setHours(0, 0, 0, 0);
+  const diff = Math.ceil((target.getTime() - now.getTime()) / 86400000);
+  return diff;
+}
+
+function getMonthAbbr(dateSort: string): { day: string; month: string } {
+  const d = new Date(dateSort);
+  return {
+    day:   d.getDate().toString(),
+    month: d.toLocaleString("pl-PL", { month: "short" }).replace(".", "").toUpperCase(),
+  };
 }
 
 // ── Karta eventu ─────────────────────────────────────────────
 
-function EventCard({ event, isNext }: { event: AirEvent; isNext?: boolean }) {
-  const cfg = STATUS_CONFIG[event.status];
+function EventCard({ event, isNext, index }: { event: AirEvent; isNext?: boolean; index?: number }) {
+  const [hovered, setHovered] = useState(false);
+  const days   = getDaysUntil(event.dateSort);
+  const mabbr  = getMonthAbbr(event.dateSort);
+  const isDone = event.status === "done";
 
   return (
-    <div style={{
-      display:        "grid",
-      gridTemplateColumns: "auto 1fr auto",
-      gap:            "var(--space-4)",
-      alignItems:     "start",
-      padding:        "var(--space-5)",
-      borderRadius:   "var(--radius-xl)",
-      background:     isNext ? "var(--color-accent-subtle)" : "var(--color-surface)",
-      border:         `1px solid ${isNext ? "var(--color-accent)" : "var(--color-border)"}`,
-      opacity:        event.status === "done" ? 0.55 : 1,
-      transition:     "transform .2s ease, box-shadow .2s ease, opacity .2s",
-      position:       "relative",
-      overflow:       "hidden",
-    }}
-      onMouseEnter={e => {
-        if (event.status === "done") return;
-        (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
-        (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-md)";
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.transform = "";
-        (e.currentTarget as HTMLElement).style.boxShadow = "";
-      }}
+    <div
+      className="kl-card"
+      data-done={isDone}
+      data-next={isNext}
+      data-hovered={hovered && !isDone}
+      style={{ animationDelay: `${(index ?? 0) * 0.04}s` }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {/* Ikona miesiąca / checkmark */}
-      <div style={{
-        width:          44,
-        height:         44,
-        borderRadius:   "var(--radius-lg)",
-        background:     event.status === "done" ? "var(--color-surface-offset)" : isNext ? "var(--color-accent)" : "var(--color-surface-offset)",
-        display:        "flex",
-        flexDirection:  "column",
-        alignItems:     "center",
-        justifyContent: "center",
-        flexShrink:     0,
-        gap:            1,
-      }}>
-        {event.status === "done" ? (
-          <CheckCircle2 size={18} style={{ color: "var(--color-text-faint)" }}/>
-        ) : (
-          <Plane size={18} style={{ color: isNext ? "#fff" : "var(--color-accent)" }}/>
-        )}
+      {/* Lewa linia akcentu */}
+      {!isDone && (
+        <div className={`kl-card-stripe ${isNext ? "kl-card-stripe--next" : event.status === "soon" ? "kl-card-stripe--soon" : "kl-card-stripe--upcoming"}`}/>
+      )}
+
+      {/* Blok daty */}
+      <div className={`kl-date-block ${isDone ? "kl-date-block--done" : isNext ? "kl-date-block--next" : ""}`}>
+        <span className="kl-date-day">{mabbr.day}</span>
+        <span className="kl-date-month">{mabbr.month}</span>
       </div>
 
       {/* Treść */}
-      <div style={{ minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap", marginBottom: "var(--space-1)" }}>
-          <h3 style={{
-            fontFamily:   "var(--font-display)",
-            fontWeight:   800,
-            fontSize:     "var(--text-base)",
-            letterSpacing: "-0.02em",
-            color:        event.status === "done" ? "var(--color-text-muted)" : "var(--color-text)",
-            overflow:     "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace:   "nowrap",
-          }}>
+      <div className="kl-card-body">
+        <div className="kl-card-top">
+          <h3 className={`kl-card-title ${isDone ? "kl-card-title--done" : ""}`}>
             {event.name}
           </h3>
-          {isNext && (
-            <span style={{
-              fontSize:       9,
-              fontWeight:     800,
-              textTransform:  "uppercase",
-              letterSpacing:  ".1em",
-              color:          "#fff",
-              background:     "var(--color-accent)",
-              padding:        "2px 7px",
-              borderRadius:   99,
-              flexShrink:     0,
-            }}>
-              Następny
-            </span>
-          )}
-          {event.note && (
-            <span style={{
-              fontSize:       9,
-              fontWeight:     700,
-              textTransform:  "uppercase",
-              letterSpacing:  ".08em",
-              color:          "var(--color-gold)",
-              background:     "var(--color-gold-subtle)",
-              padding:        "2px 7px",
-              borderRadius:   99,
-              flexShrink:     0,
-              border:         "1px solid color-mix(in srgb, var(--color-gold) 30%, transparent)",
-            }}>
-              {event.note}
-            </span>
-          )}
+          <div className="kl-card-badges">
+            {isNext && <span className="kl-badge kl-badge--next">Następny ✦</span>}
+            {event.note === "Blisko Polski" && <span className="kl-badge kl-badge--geo">📍 {event.note}</span>}
+            {event.note === "Warte uwagi"   && <span className="kl-badge kl-badge--star"><Star size={9} fill="currentColor"/> {event.note}</span>}
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", fontSize: "var(--text-xs)", color: "var(--color-text-muted)", fontWeight: 500 }}>
+
+        <div className="kl-card-meta">
+          <span className="kl-meta-item">
             <Calendar size={11}/> {event.date}
           </span>
-          <span style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", fontSize: "var(--text-xs)", color: "var(--color-text-faint)" }}>
+          <span className="kl-meta-dot"/>
+          <span className="kl-meta-item">
             <MapPin size={11}/> {event.location}
           </span>
         </div>
       </div>
 
-      {/* Status badge */}
-      <div style={{
-        display:        "inline-flex",
-        alignItems:     "center",
-        gap:            4,
-        padding:        "3px 10px",
-        borderRadius:   99,
-        fontSize:       9,
-        fontWeight:     700,
-        textTransform:  "uppercase",
-        letterSpacing:  ".08em",
-        color:          cfg.color,
-        background:     cfg.bg,
-        flexShrink:     0,
-        whiteSpace:     "nowrap",
-        border:         `1px solid color-mix(in srgb, ${cfg.color} 20%, transparent)`,
-      }}>
-        {cfg.icon} {cfg.label}
+      {/* Prawa strona — status + odliczanie */}
+      <div className="kl-card-right">
+        {!isDone && days !== null && days >= 0 && (
+          <div className={`kl-countdown ${isNext ? "kl-countdown--next" : ""}`}>
+            <span className="kl-countdown-num">{days === 0 ? "dziś" : days === 1 ? "jutro" : `${days}`}</span>
+            {days > 1 && <span className="kl-countdown-label">dni</span>}
+          </div>
+        )}
+        <div className={`kl-status-dot ${isDone ? "kl-status-dot--done" : event.status === "soon" ? "kl-status-dot--soon" : "kl-status-dot--upcoming"}`}/>
+      </div>
+    </div>
+  );
+}
+
+// ── Pasek postępu sezonu ──────────────────────────────────────
+
+function SeasonProgress() {
+  const total = EVENTS.filter(e => e.tab === "polska").length;
+  const done  = EVENTS.filter(e => e.tab === "polska" && e.status === "done").length;
+  const pct   = Math.round((done / total) * 100);
+
+  return (
+    <div className="kl-progress-wrap">
+      <div className="kl-progress-head">
+        <span className="kl-progress-label">Postęp sezonu 2026</span>
+        <span className="kl-progress-pct">{pct}%</span>
+      </div>
+      <div className="kl-progress-track">
+        <div className="kl-progress-fill" style={{ width: `${pct}%` }}/>
+      </div>
+      <div className="kl-progress-legend">
+        <span><CheckCircle2 size={10}/> {done} odbyte</span>
+        <span><Clock size={10}/> {total - done} przed nami</span>
       </div>
     </div>
   );
@@ -196,184 +162,252 @@ function EventCard({ event, isNext }: { event: AirEvent; isNext?: boolean }) {
 
 export default function KalendarzClient() {
   const [tab, setTab] = useState<EventTab>("polska");
+  const [mounted, setMounted] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  const events  = EVENTS.filter(e => e.tab === tab).sort((a, b) => a.dateSort.localeCompare(b.dateSort));
-  const nextEvt = getNextEvent(tab);
+  useEffect(() => { setMounted(true); }, []);
 
-  const doneCount     = events.filter(e => e.status === "done").length;
-  const upcomingCount = events.filter(e => e.status !== "done").length;
+  const events        = EVENTS.filter(e => e.tab === tab).sort((a, b) => a.dateSort.localeCompare(b.dateSort));
+  const nextEvt       = getNextEvent(tab);
+  const doneEvents    = events.filter(e => e.status === "done");
+  const upcomingEvts  = events.filter(e => e.status !== "done").filter(e => !nextEvt || e.name !== nextEvt.name);
+
+  const handleTabChange = (t: EventTab) => {
+    setTab(t);
+    setTimeout(() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+  };
 
   return (
     <>
       <style>{`
-        @keyframes kl-fade-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        .kl-tab{padding:var(--space-2) var(--space-5);border-radius:calc(var(--radius-lg) - 2px);font-size:var(--text-sm);font-weight:700;cursor:pointer;border:none;background:none;color:var(--color-text-muted);transition:background .15s,color .15s;display:inline-flex;align-items:center;gap:var(--space-2);white-space:nowrap}
-        .kl-tab:hover{color:var(--color-text)}
-        .kl-tab.on{background:var(--color-bg);color:var(--color-text);box-shadow:var(--shadow-sm)}
-        .kl-tab.on svg{color:var(--color-accent)}
-        .kl-list{display:flex;flex-direction:column;gap:var(--space-3);animation:kl-fade-up .3s cubic-bezier(.16,1,.3,1) both}
-        .kl-sep{display:flex;align-items:center;gap:var(--space-4);margin:var(--space-6) 0 var(--space-4)}
-        .kl-sep-line{flex:1;height:1px;background:var(--color-divider)}
-        .kl-sep-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--color-text-faint);white-space:nowrap}
+        /* ── Animacje ── */
+        @keyframes kl-up   { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes kl-in   { from{opacity:0;transform:translateY(8px)}  to{opacity:1;transform:translateY(0)} }
+        @keyframes kl-pulse{ 0%,100%{opacity:1} 50%{opacity:.5} }
+        @keyframes kl-fly  { 0%{transform:translateX(-6px) rotate(-5deg);opacity:0} 100%{transform:translateX(0) rotate(0);opacity:1} }
+        @keyframes kl-prog { from{width:0} to{width:var(--target-w)} }
+
+        /* ── Layout ── */
+        .kl-wrap   { padding-top:80px; min-height:100dvh; padding-bottom:var(--space-24); }
+        .kl-hero   { background:var(--color-surface); border-bottom:1px solid var(--color-divider); padding:clamp(var(--space-12),6vw,var(--space-20)) 0 0; position:relative; overflow:hidden; }
+        .kl-deco   { position:absolute; right:-2%; bottom:-15%; font-family:var(--font-display); font-weight:900; font-size:clamp(8rem,22vw,20rem); line-height:1; color:var(--color-text); opacity:.022; user-select:none; pointer-events:none; letter-spacing:-0.06em; }
+        .kl-back   { display:inline-flex; align-items:center; gap:var(--space-2); font-size:var(--text-xs); font-weight:700; color:var(--color-text-faint); text-transform:uppercase; letter-spacing:.08em; margin-bottom:var(--space-6); transition:color .15s, gap .15s; text-decoration:none; }
+        .kl-back:hover { color:var(--color-accent); gap:var(--space-1); }
+
+        /* ── H1 ── */
+        .kl-h1     { font-family:var(--font-display); font-weight:900; font-size:var(--text-2xl); letter-spacing:-0.04em; line-height:1.05; margin-bottom:var(--space-5); animation:kl-up .5s cubic-bezier(.16,1,.3,1) both; }
+        .kl-h1 em  { font-style:normal; color:var(--color-accent); }
+        .kl-sub    { font-size:var(--text-base); color:var(--color-text-muted); max-width:52ch; line-height:1.7; margin-bottom:var(--space-8); animation:kl-up .5s .05s cubic-bezier(.16,1,.3,1) both; }
+
+        /* ── Statystyki ── */
+        .kl-stats  { display:flex; gap:var(--space-8); flex-wrap:wrap; padding-bottom:var(--space-8); border-bottom:1px solid var(--color-divider); animation:kl-up .5s .1s cubic-bezier(.16,1,.3,1) both; }
+        .kl-stat   { display:flex; flex-direction:column; gap:2px; }
+        .kl-stat-v { font-family:var(--font-display); font-weight:900; font-size:var(--text-xl); letter-spacing:-0.04em; line-height:1; font-variant-numeric:tabular-nums; }
+        .kl-stat-l { font-size:var(--text-xs); color:var(--color-text-faint); font-weight:600; text-transform:uppercase; letter-spacing:.07em; }
+
+        /* ── Tabs ── */
+        .kl-tabs-wrap { display:flex; gap:3px; padding:3px; background:var(--color-surface-2); border-radius:var(--radius-xl); width:fit-content; margin-top:var(--space-7); margin-bottom:-1px; animation:kl-up .5s .15s cubic-bezier(.16,1,.3,1) both; }
+        .kl-tab { padding:var(--space-2) var(--space-5); border-radius:calc(var(--radius-lg) - 2px); font-size:var(--text-sm); font-weight:700; cursor:pointer; border:none; background:none; color:var(--color-text-muted); transition:background .15s,color .15s,box-shadow .15s; display:inline-flex; align-items:center; gap:var(--space-2); white-space:nowrap; }
+        .kl-tab:hover:not(.on) { color:var(--color-text); background:var(--color-surface-offset); }
+        .kl-tab.on  { background:var(--color-bg); color:var(--color-text); box-shadow:var(--shadow-sm); }
+        .kl-tab.on svg { color:var(--color-accent); }
+        .kl-tab-count { font-size:10px; font-weight:800; background:var(--color-surface-offset); padding:1px 7px; border-radius:99px; margin-left:2px; transition:color .15s; }
+
+        /* ── Progress bar ── */
+        .kl-progress-wrap  { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-xl); padding:var(--space-4) var(--space-5); margin-bottom:var(--space-6); animation:kl-up .4s cubic-bezier(.16,1,.3,1) both; }
+        .kl-progress-head  { display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-3); }
+        .kl-progress-label { font-size:var(--text-xs); font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--color-text-muted); }
+        .kl-progress-pct   { font-family:var(--font-display); font-weight:900; font-size:var(--text-lg); color:var(--color-accent); letter-spacing:-0.03em; }
+        .kl-progress-track { height:6px; background:var(--color-surface-offset); border-radius:var(--radius-full); overflow:hidden; margin-bottom:var(--space-3); }
+        .kl-progress-fill  { height:100%; background:linear-gradient(90deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 60%, var(--color-gold))); border-radius:var(--radius-full); transition:width 1s cubic-bezier(.16,1,.3,1); }
+        .kl-progress-legend{ display:flex; gap:var(--space-5); font-size:var(--text-xs); color:var(--color-text-faint); font-weight:600; }
+        .kl-progress-legend span { display:inline-flex; align-items:center; gap:4px; }
+
+        /* ── Separatory ── */
+        .kl-sep { display:flex; align-items:center; gap:var(--space-4); margin:var(--space-6) 0 var(--space-3); }
+        .kl-sep-line  { flex:1; height:1px; background:var(--color-divider); }
+        .kl-sep-label { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--color-text-faint); white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+
+        /* ── Next event hero ── */
+        .kl-next-label { font-size:var(--text-xs); font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--color-text-faint); margin-bottom:var(--space-3); display:flex; align-items:center; gap:var(--space-2); }
+        .kl-next-pulse { width:7px; height:7px; border-radius:50%; background:var(--color-accent); animation:kl-pulse 1.8s ease-in-out infinite; flex-shrink:0; }
+
+        /* ── Karty ── */
+        .kl-list  { display:flex; flex-direction:column; gap:var(--space-2); }
+        .kl-card  { position:relative; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:var(--space-4); padding:var(--space-4) var(--space-5); border-radius:var(--radius-xl); background:var(--color-surface); border:1px solid var(--color-border); overflow:hidden; cursor:default; animation:kl-in .35s cubic-bezier(.16,1,.3,1) both; transition:transform .2s cubic-bezier(.16,1,.3,1), box-shadow .2s cubic-bezier(.16,1,.3,1), border-color .2s, background .2s; }
+        .kl-card[data-done="true"] { opacity:.5; }
+        .kl-card[data-next="true"] { background:var(--color-accent-subtle); border-color:color-mix(in srgb, var(--color-accent) 40%, transparent); }
+        .kl-card[data-hovered="true"]:not([data-done="true"]) { transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:color-mix(in srgb, var(--color-accent) 35%, transparent); }
+
+        /* Linia stripe ── */
+        .kl-card-stripe { position:absolute; left:0; top:12%; bottom:12%; width:3px; border-radius:0 var(--radius-full) var(--radius-full) 0; }
+        .kl-card-stripe--next     { background:var(--color-accent); }
+        .kl-card-stripe--soon     { background:var(--color-accent); opacity:.7; }
+        .kl-card-stripe--upcoming { background:var(--color-gold); opacity:.6; }
+
+        /* Blok daty ── */
+        .kl-date-block { width:44px; height:48px; border-radius:var(--radius-lg); background:var(--color-surface-offset); display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; gap:0; }
+        .kl-date-block--done { opacity:.5; }
+        .kl-date-block--next { background:var(--color-accent); }
+        .kl-date-block--next .kl-date-day   { color:#fff; }
+        .kl-date-block--next .kl-date-month { color:rgba(255,255,255,.75); }
+        .kl-date-day   { font-family:var(--font-display); font-weight:900; font-size:var(--text-base); line-height:1; letter-spacing:-0.02em; color:var(--color-text); }
+        .kl-date-month { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--color-text-faint); margin-top:1px; }
+
+        /* Treść ── */
+        .kl-card-body   { min-width:0; display:flex; flex-direction:column; gap:var(--space-2); }
+        .kl-card-top    { display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap; }
+        .kl-card-title  { font-family:var(--font-display); font-weight:800; font-size:var(--text-base); letter-spacing:-0.02em; color:var(--color-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2; }
+        .kl-card-title--done { color:var(--color-text-muted); }
+        .kl-card-meta   { display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap; }
+        .kl-meta-item   { display:inline-flex; align-items:center; gap:4px; font-size:var(--text-xs); color:var(--color-text-muted); font-weight:500; }
+        .kl-meta-dot    { width:3px; height:3px; border-radius:50%; background:var(--color-text-faint); flex-shrink:0; }
+
+        /* Badges ── */
+        .kl-card-badges { display:flex; gap:4px; flex-wrap:wrap; }
+        .kl-badge       { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:99px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; flex-shrink:0; white-space:nowrap; }
+        .kl-badge--next { background:var(--color-accent); color:#fff; }
+        .kl-badge--geo  { background:color-mix(in srgb, var(--color-primary,#01696f) 12%, transparent); color:var(--color-primary,#01696f); border:1px solid color-mix(in srgb, var(--color-primary,#01696f) 25%, transparent); }
+        .kl-badge--star { background:var(--color-gold-subtle); color:var(--color-gold); border:1px solid color-mix(in srgb, var(--color-gold) 25%, transparent); }
+
+        /* Prawa strona — odliczanie ── */
+        .kl-card-right    { display:flex; flex-direction:column; align-items:flex-end; gap:var(--space-2); flex-shrink:0; }
+        .kl-countdown     { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:44px; padding:var(--space-2) var(--space-2); border-radius:var(--radius-lg); background:var(--color-surface-offset); border:1px solid var(--color-border); }
+        .kl-countdown--next { background:var(--color-accent-subtle); border-color:color-mix(in srgb, var(--color-accent) 30%, transparent); }
+        .kl-countdown--next .kl-countdown-num { color:var(--color-accent); }
+        .kl-countdown-num { font-family:var(--font-display); font-weight:900; font-size:var(--text-base); line-height:1; letter-spacing:-0.03em; font-variant-numeric:tabular-nums; color:var(--color-text); }
+        .kl-countdown-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--color-text-faint); margin-top:1px; }
+        .kl-status-dot    { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+        .kl-status-dot--done     { background:var(--color-text-faint); }
+        .kl-status-dot--soon     { background:var(--color-accent); animation:kl-pulse 1.5s ease-in-out infinite; }
+        .kl-status-dot--upcoming { background:var(--color-gold); }
+
+        /* ── CTA banner ── */
+        .kl-cta { margin-top:var(--space-12); padding:var(--space-8); border-radius:var(--radius-2xl); background:var(--color-accent-subtle); border:1px solid color-mix(in srgb, var(--color-accent) 35%, transparent); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-5); position:relative; overflow:hidden; }
+        .kl-cta-deco { position:absolute; right:-2%; bottom:-20%; font-family:var(--font-display); font-weight:900; font-size:clamp(5rem,14vw,12rem); line-height:1; color:var(--color-accent); opacity:.06; user-select:none; pointer-events:none; letter-spacing:-0.05em; }
+        .kl-cta-btn { display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-3) var(--space-6); border-radius:var(--radius-md); background:var(--color-accent); color:#fff; font-weight:700; font-size:var(--text-sm); text-decoration:none; white-space:nowrap; flex-shrink:0; transition:background .18s, transform .15s, box-shadow .18s; box-shadow:0 2px 12px color-mix(in srgb, var(--color-accent) 35%, transparent); }
+        .kl-cta-btn:hover { background:var(--color-accent-hover); transform:translateY(-1px); box-shadow:0 6px 20px color-mix(in srgb, var(--color-accent) 45%, transparent); }
+        .kl-cta-btn:active { transform:scale(.97); }
+
+        /* ── Responsive ── */
+        @media(max-width:600px) {
+          .kl-card { grid-template-columns:auto 1fr; }
+          .kl-card-right { display:none; }
+          .kl-stats { gap:var(--space-5); }
+          .kl-cta { flex-direction:column; align-items:flex-start; }
+        }
       `}</style>
 
-      <div style={{ paddingTop: 80, minHeight: "100dvh", paddingBottom: "var(--space-24)" }}>
+      <div className="kl-wrap">
 
         {/* ── Hero ── */}
-        <div style={{
-          background:    "var(--color-surface)",
-          borderBottom:  "1px solid var(--color-divider)",
-          padding:       "clamp(var(--space-12),6vw,var(--space-20)) 0 0",
-          position:      "relative",
-          overflow:      "hidden",
-        }}>
-          {/* Deco */}
-          <div aria-hidden style={{
-            position:    "absolute", right: "-2%", bottom: "-15%",
-            fontFamily:  "var(--font-display)", fontWeight: 900,
-            fontSize:    "clamp(8rem,22vw,20rem)", lineHeight: 1,
-            color:       "var(--color-text)", opacity: .025,
-            userSelect:  "none", pointerEvents: "none", letterSpacing: "-0.06em",
-          }}>2026</div>
+        <div className="kl-hero">
+          <div aria-hidden className="kl-deco">2026</div>
 
-          <div className="container--narrow" style={{ position: "relative", zIndex: 1 }}>
-            <Link href="/" style={{ display:"inline-flex", alignItems:"center", gap:"var(--space-2)", fontSize:"var(--text-xs)", fontWeight:700, color:"var(--color-text-faint)", textTransform:"uppercase", letterSpacing:".08em", marginBottom:"var(--space-6)", transition:"color .15s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--color-text)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--color-text-faint)")}
-            >
+          <div className="container--narrow" style={{ position:"relative", zIndex:1 }}>
+            <Link href="/" className="kl-back">
               <ArrowLeft size={12}/> Strona główna
             </Link>
 
-            <div style={{ marginBottom: "var(--space-3)" }}>
-              <span className="badge"><Calendar size={11}/> Sezon 2026</span>
+            <div style={{ marginBottom:"var(--space-3)" }}>
+              <span className="badge"><Plane size={11}/> Sezon 2026</span>
             </div>
 
-            <h1 style={{
-              fontFamily:   "var(--font-display)",
-              fontWeight:   900,
-              fontSize:     "var(--text-2xl)",
-              letterSpacing: "-0.04em",
-              lineHeight:   1.05,
-              marginBottom: "var(--space-5)",
-            }}>
+            <h1 className="kl-h1">
               Kalendarz pokazów<br/>
-              <span style={{ color: "var(--color-accent)" }}>lotniczych 2026</span>
+              <em>lotniczych 2026</em>
             </h1>
 
-            <p style={{ fontSize: "var(--text-base)", color: "var(--color-text-muted)", maxWidth: "56ch", lineHeight: 1.7, marginBottom: "var(--space-8)" }}>
+            <p className="kl-sub">
               Wszystkie pokazy lotnicze w Polsce oraz wybrane imprezy zagraniczne warte uwagi — w jednym miejscu.
             </p>
 
             {/* Statystyki */}
-            <div style={{ display: "flex", gap: "var(--space-8)", flexWrap: "wrap", paddingBottom: "var(--space-8)", borderBottom: "1px solid var(--color-divider)" }}>
+            <div className="kl-stats">
               {[
-                { value: EVENTS.filter(e => e.tab === "polska").length,    label: "Pokazów w Polsce" },
-                { value: EVENTS.filter(e => e.status === "done").length,   label: "Już odbyło się" },
-                { value: EVENTS.filter(e => e.status !== "done").length,   label: "Jeszcze przed nami" },
-              ].map(({ value, label }) => (
-                <div key={label}>
-                  <p style={{ fontFamily:"var(--font-display)", fontWeight:900, fontSize:"var(--text-xl)", letterSpacing:"-0.04em", lineHeight:1, fontVariantNumeric:"tabular-nums" }}>{value}</p>
-                  <p style={{ fontSize:"var(--text-xs)", color:"var(--color-text-faint)", fontWeight:600, textTransform:"uppercase", letterSpacing:".07em", marginTop: 3 }}>{label}</p>
+                { value: EVENTS.filter(e => e.tab === "polska").length,  label: "Pokazów w Polsce",    color: "var(--color-text)" },
+                { value: EVENTS.filter(e => e.status === "done").length, label: "Już odbyło się",      color: "var(--color-text-muted)" },
+                { value: EVENTS.filter(e => e.status !== "done").length, label: "Jeszcze przed nami",  color: "var(--color-accent)" },
+              ].map(({ value, label, color }) => (
+                <div className="kl-stat" key={label}>
+                  <span className="kl-stat-v" style={{ color }}>{value}</span>
+                  <span className="kl-stat-l">{label}</span>
                 </div>
               ))}
             </div>
 
             {/* Zakładki */}
-            <div style={{
-              display:       "flex",
-              gap:           3,
-              padding:       3,
-              background:    "var(--color-surface-2)",
-              borderRadius:  "var(--radius-xl)",
-              width:         "fit-content",
-              marginTop:     "var(--space-6)",
-              marginBottom:  "-1px",
-            }}>
-              <button className={`kl-tab ${tab === "polska" ? "on" : ""}`} onClick={() => setTab("polska")}>
-                <Plane size={13}/> Polska
-                <span style={{ fontSize:10, fontWeight:800, color: tab === "polska" ? "var(--color-accent)" : "var(--color-text-faint)", background:"var(--color-surface-offset)", padding:"1px 7px", borderRadius:99, marginLeft:2 }}>
-                  {EVENTS.filter(e => e.tab === "polska").length}
-                </span>
-              </button>
-              <button className={`kl-tab ${tab === "zagranica" ? "on" : ""}`} onClick={() => setTab("zagranica")}>
-                <Globe size={13}/> Zagranica
-                <span style={{ fontSize:10, fontWeight:800, color: tab === "zagranica" ? "var(--color-accent)" : "var(--color-text-faint)", background:"var(--color-surface-offset)", padding:"1px 7px", borderRadius:99, marginLeft:2 }}>
-                  {EVENTS.filter(e => e.tab === "zagranica").length}
-                </span>
-              </button>
+            <div className="kl-tabs-wrap">
+              {(["polska", "zagranica"] as EventTab[]).map(t => (
+                <button
+                  key={t}
+                  className={`kl-tab ${tab === t ? "on" : ""}`}
+                  onClick={() => handleTabChange(t)}
+                >
+                  {t === "polska" ? <Plane size={13}/> : <Globe size={13}/>}
+                  {t === "polska" ? "Polska" : "Zagranica"}
+                  <span className="kl-tab-count" style={{ color: tab === t ? "var(--color-accent)" : "var(--color-text-faint)" }}>
+                    {EVENTS.filter(e => e.tab === t).length}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* ── Lista ── */}
-        <div className="container--narrow" style={{ paddingTop: "var(--space-8)" }}>
+        {/* ── Treść ── */}
+        <div className="container--narrow" style={{ paddingTop:"var(--space-8)" }} ref={listRef}>
 
-          {/* Wyróżniony — następny event */}
+          {/* Pasek postępu — tylko Polska */}
+          {tab === "polska" && mounted && <SeasonProgress />}
+
+          {/* Następny event */}
           {nextEvt && (
-            <div style={{ marginBottom: "var(--space-6)" }}>
-              <p style={{ fontSize:"var(--text-xs)", fontWeight:700, textTransform:"uppercase", letterSpacing:".1em", color:"var(--color-text-faint)", marginBottom:"var(--space-3)" }}>
+            <div style={{ marginBottom:"var(--space-6)" }}>
+              <p className="kl-next-label">
+                <span className="kl-next-pulse"/>
                 Następne wydarzenie
               </p>
-              <EventCard event={nextEvt} isNext/>
+              <EventCard event={nextEvt} isNext index={0}/>
             </div>
           )}
 
           <div className="kl-list">
 
             {/* Odbyte */}
-            {doneCount > 0 && (
+            {doneEvents.length > 0 && (
               <>
                 <div className="kl-sep">
                   <div className="kl-sep-line"/>
                   <span className="kl-sep-label">
-                    <CheckCircle2 size={10} style={{ display:"inline", verticalAlign:"middle", marginRight:4 }}/>
-                    Odbyte — {doneCount}
+                    <CheckCircle2 size={10}/> Odbyte — {doneEvents.length}
                   </span>
                   <div className="kl-sep-line"/>
                 </div>
-                {events.filter(e => e.status === "done").map(e => (
-                  <EventCard key={e.name + e.dateSort} event={e}/>
-                ))}
+                {doneEvents.map((e, i) => <EventCard key={e.name + e.dateSort} event={e} index={i}/>)}
               </>
             )}
 
             {/* Nadchodzące */}
-            {upcomingCount > 0 && (
+            {upcomingEvts.length > 0 && (
               <>
                 <div className="kl-sep">
                   <div className="kl-sep-line"/>
                   <span className="kl-sep-label" style={{ color:"var(--color-gold)" }}>
-                    <Clock size={10} style={{ display:"inline", verticalAlign:"middle", marginRight:4 }}/>
-                    Nadchodzące — {upcomingCount}
+                    <Clock size={10}/> Nadchodzące — {upcomingEvts.length}
                   </span>
                   <div className="kl-sep-line"/>
                 </div>
-                {events
-                  .filter(e => e.status !== "done")
-                  .filter(e => !nextEvt || e.name !== nextEvt.name || e.dateSort !== nextEvt.dateSort)
-                  .map(e => (
-                    <EventCard key={e.name + e.dateSort} event={e}/>
-                  ))
-                }
+                {upcomingEvts.map((e, i) => <EventCard key={e.name + e.dateSort} event={e} index={i + 1}/>)}
               </>
             )}
 
           </div>
 
-          {/* CTA — Twoje zdjęcia */}
-          <div style={{
-            marginTop:    "var(--space-12)",
-            padding:      "var(--space-8)",
-            borderRadius: "var(--radius-2xl)",
-            background:   "var(--color-accent-subtle)",
-            border:       "1px solid var(--color-accent)",
-            display:      "flex",
-            alignItems:   "center",
-            justifyContent: "space-between",
-            flexWrap:     "wrap",
-            gap:          "var(--space-5)",
-          }}>
-            <div>
+          {/* CTA */}
+          <div className="kl-cta">
+            <div aria-hidden className="kl-cta-deco">✈</div>
+            <div style={{ position:"relative", zIndex:1 }}>
               <p style={{ fontFamily:"var(--font-display)", fontWeight:800, fontSize:"var(--text-lg)", letterSpacing:"-0.02em", marginBottom:"var(--space-1)" }}>
                 Byłeś na jednym z tych pokazów?
               </p>
@@ -381,27 +415,11 @@ export default function KalendarzClient() {
                 Zobacz zdjęcia z poprzednich edycji w galerii.
               </p>
             </div>
-            <Link href="/gallery" style={{
-              display:      "inline-flex",
-              alignItems:   "center",
-              gap:          "var(--space-2)",
-              padding:      "var(--space-3) var(--space-6)",
-              borderRadius: "var(--radius-md)",
-              background:   "var(--color-accent)",
-              color:        "#fff",
-              fontWeight:   700,
-              fontSize:     "var(--text-sm)",
-              textDecoration: "none",
-              whiteSpace:   "nowrap",
-              transition:   "background .18s, transform .15s",
-              flexShrink:   0,
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--color-accent-hover)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--color-accent)"; (e.currentTarget as HTMLElement).style.transform = ""; }}
-            >
+            <Link href="/gallery" className="kl-cta-btn" style={{ position:"relative", zIndex:1 }}>
               Przeglądaj galerię <ChevronRight size={15}/>
             </Link>
           </div>
+
         </div>
       </div>
     </>
