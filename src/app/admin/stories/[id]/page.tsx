@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Trash2, GripVertical, Save, Play,
   Loader2, Image as ImageIcon, Type, BarChart2,
-  Lightbulb, ChevronDown, ChevronUp, AlertCircle,
+  Lightbulb, ChevronDown, ChevronUp, AlertCircle, FolderOpen,
 } from "lucide-react";
 import StoryPlayer from "@/components/stories/StoryPlayer";
+import MediaPicker from "@/components/admin/MediaPicker";
 import { mapStory } from "@/lib/supabase/types";
 import type { DbStory, FrameType } from "@/lib/supabase/types";
 
-// ── Typy lokalne ─────────────────────────────────────────────
+// ── Typy ─────────────────────────────────────────────────────
 interface Frame {
   id:              string;
   story_id:        string;
@@ -30,6 +31,11 @@ interface Frame {
   _dirty?: boolean;
 }
 
+// Opisuje który picker jest otwarty:
+// "cover" = cover image relacji
+// `frame:${id}` = image_src konkretnej klatki
+type PickerTarget = "cover" | `frame:${string}` | null;
+
 const FRAME_TYPES: { value: FrameType; label: string; icon: React.ReactNode; desc: string }[] = [
   { value: "photo",  label: "Zdjęcie",     icon: <ImageIcon size={13}/>, desc: "Zdjęcie z podpisem i nazwą samolotu" },
   { value: "burst",  label: "Seria",       icon: <ImageIcon size={13}/>, desc: "Seria zdjęć" },
@@ -38,23 +44,42 @@ const FRAME_TYPES: { value: FrameType; label: string; icon: React.ReactNode; des
   { value: "fact",   label: "Ciekawostka", icon: <Lightbulb size={13}/>, desc: "Ciekawy fakt" },
 ];
 
+// ── Przycisk otwierający picker ───────────────────────────────
+function PickBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      title="Wybierz z biblioteki"
+      style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"0 var(--space-3)", height:36, borderRadius:"var(--radius-md)", border:"1px solid var(--color-border)", background:"var(--color-surface-offset)", cursor:"pointer", color:"var(--color-text-muted)", flexShrink:0, transition:"background .15s,color .15s,border-color .15s" }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--color-primary)"; (e.currentTarget as HTMLElement).style.color = "var(--color-primary)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border)"; (e.currentTarget as HTMLElement).style.color = "var(--color-text-muted)"; }}
+    >
+      <FolderOpen size={14}/>
+    </button>
+  );
+}
+
 // ── Edytor pojedynczej klatki ─────────────────────────────────
-function FrameEditor({ frame, idx, total, onChange, onDelete, onMove }: {
-  frame: Frame; idx: number; total: number;
-  onChange: (id: string, patch: Partial<Frame>) => void;
-  onDelete: (id: string) => void;
-  onMove:   (id: string, dir: -1 | 1) => void;
+function FrameEditor({ frame, idx, total, onChange, onDelete, onMove, onOpenPicker }: {
+  frame:         Frame;
+  idx:           number;
+  total:         number;
+  onChange:      (id: string, patch: Partial<Frame>) => void;
+  onDelete:      (id: string) => void;
+  onMove:        (id: string, dir: -1 | 1) => void;
+  onOpenPicker:  (frameId: string) => void;
 }) {
   const [open, setOpen] = useState(true);
+
   const set = (field: keyof Frame) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       onChange(frame.id, { [field]: e.target.value || null } as Partial<Frame>);
 
   const typeLabel = FRAME_TYPES.find(t => t.value === frame.type)?.icon;
+  const hasImage  = frame.type === "photo" || frame.type === "burst" || frame.type === "stat";
 
   return (
     <div style={{ border:"1px solid var(--color-border)", borderRadius:"var(--radius-xl)", background:"var(--color-surface)", overflow:"hidden" }}>
-      {/* Nagłówek */}
+      {/* Nagłówek klatki */}
       <div
         onClick={() => setOpen(o => !o)}
         style={{ display:"flex", alignItems:"center", gap:"var(--space-3)", padding:"var(--space-3) var(--space-4)", background:"var(--color-surface-offset)", cursor:"pointer", userSelect:"none" }}
@@ -72,16 +97,26 @@ function FrameEditor({ frame, idx, total, onChange, onDelete, onMove }: {
             niezapisane
           </span>
         )}
+        {/* Miniatura jeśli jest obrazek */}
+        {frame.image_src && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={frame.image_src} alt=""
+            style={{ width:28, height:28, borderRadius:"var(--radius-sm)", objectFit:"cover", border:"1px solid var(--color-border)", flexShrink:0 }}/>
+        )}
         <div style={{ display:"flex", gap:2 }} onClick={e => e.stopPropagation()}>
           <button className="fe-btn" disabled={idx === 0}        onClick={() => onMove(frame.id, -1)}><ChevronUp size={12}/></button>
           <button className="fe-btn" disabled={idx === total-1} onClick={() => onMove(frame.id,  1)}><ChevronDown size={12}/></button>
           <button className="fe-btn danger" onClick={() => onDelete(frame.id)}><Trash2 size={12}/></button>
         </div>
-        {open ? <ChevronUp size={13} style={{ flexShrink:0, color:"var(--color-text-faint)" }}/> : <ChevronDown size={13} style={{ flexShrink:0, color:"var(--color-text-faint)" }}/>}
+        {open
+          ? <ChevronUp   size={13} style={{ flexShrink:0, color:"var(--color-text-faint)" }}/>
+          : <ChevronDown size={13} style={{ flexShrink:0, color:"var(--color-text-faint)" }}/>
+        }
       </div>
 
       {open && (
         <div style={{ padding:"var(--space-5)", display:"grid", gap:"var(--space-4)" }}>
+
           {/* Wiersz 1: typ, czas, znacznik */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"var(--space-3)" }}>
             <div>
@@ -104,12 +139,16 @@ function FrameEditor({ frame, idx, total, onChange, onDelete, onMove }: {
           </div>
 
           {/* URL zdjęcia */}
-          {(frame.type === "photo" || frame.type === "burst" || frame.type === "stat") && (
+          {hasImage && (
             <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:"var(--space-3)" }}>
               <div>
-                <label className="fe-label">URL zdjęcia</label>
-                <input className="fe-input" placeholder="https://…"
-                  value={frame.image_src ?? ""} onChange={set("image_src")}/>
+                <label className="fe-label">Zdjęcie</label>
+                <div style={{ display:"flex", gap:"var(--space-2)" }}>
+                  <input className="fe-input" placeholder="https://… lub wybierz z biblioteki"
+                    value={frame.image_src ?? ""}
+                    onChange={e => onChange(frame.id, { image_src: e.target.value || null })}/>
+                  <PickBtn onClick={() => onOpenPicker(frame.id)}/>
+                </div>
               </div>
               <div>
                 <label className="fe-label">Alt tekst</label>
@@ -120,9 +159,14 @@ function FrameEditor({ frame, idx, total, onChange, onDelete, onMove }: {
 
           {/* Podgląd zdjęcia */}
           {frame.image_src && (
-            <div style={{ borderRadius:"var(--radius-lg)", overflow:"hidden", height:140, background:"var(--color-surface-offset)" }}>
+            <div style={{ borderRadius:"var(--radius-lg)", overflow:"hidden", height:140, background:"var(--color-surface-offset)", border:"1px solid var(--color-border)", position:"relative" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={frame.image_src} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+              <button
+                onClick={() => onChange(frame.id, { image_src: null })}
+                title="Usuń zdjęcie"
+                style={{ position:"absolute", top:6, right:6, background:"rgba(0,0,0,.6)", border:"none", borderRadius:"50%", width:24, height:24, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:14, lineHeight:1 }}
+              >×</button>
             </div>
           )}
 
@@ -193,6 +237,9 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
   const [saved,   setSaved]   = useState(false);
   const [preview, setPreview] = useState(false);
 
+  // Który picker jest otwarty
+  const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
+
   const [meta, setMeta] = useState({
     title: "", subtitle: "", cover_image: "", accent_color: "#cc1f1f", published: false,
   });
@@ -217,6 +264,17 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
     setLoading(false);
   }
 
+  // Obsługa wyboru z pickera
+  function handlePickerSelect(url: string) {
+    if (pickerTarget === "cover") {
+      setMeta(m => ({ ...m, cover_image: url }));
+    } else if (pickerTarget?.startsWith("frame:")) {
+      const frameId = pickerTarget.slice(6);
+      updateFrame(frameId, { image_src: url });
+    }
+    setPickerTarget(null);
+  }
+
   function updateFrame(fid: string, patch: Partial<Frame>) {
     setFrames(prev => prev.map(f => f.id === fid ? { ...f, ...patch, _dirty: true } : f));
   }
@@ -234,7 +292,7 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
 
   async function deleteFrame(fid: string) {
     if (!confirm("Usunąć klatkę?")) return;
-    const res = await fetch(`/api/story-frames/${fid}`, { method: "DELETE", credentials: "include" });
+    const res = await fetch(`/api/story-frames/${fid}`, { method:"DELETE", credentials:"include" });
     if (!res.ok) {
       const b = await res.json().catch(() => ({}));
       setError(b.error ?? "Nie udało się usunąć klatki");
@@ -254,8 +312,7 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
     });
     if (res.ok) {
       const created = await res.json();
-      // API może zwrócić tablicę lub obiekt
-      const frame = Array.isArray(created) ? created[0] : created;
+      const frame   = Array.isArray(created) ? created[0] : created;
       setFrames(prev => [...prev, { ...frame, _dirty: false }]);
     } else {
       const b = await res.json().catch(() => ({}));
@@ -269,7 +326,6 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
     setError(null);
     setSaved(false);
 
-    // Zapisz meta relacji
     const metaRes = await fetch(`/api/stories/${id}`, {
       method:      "PATCH",
       credentials: "include",
@@ -290,8 +346,7 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
       return;
     }
 
-    // Zapisz zmienione klatki równolegle
-    const dirty = frames.filter(f => f._dirty);
+    const dirty   = frames.filter(f => f._dirty);
     const results = await Promise.all(dirty.map(f =>
       fetch(`/api/story-frames/${f.id}`, {
         method:      "PATCH",
@@ -318,10 +373,9 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
     setSaving(false);
   }
 
-  // Buduje MappedStory z aktualnego stanu lokalnego (do podglądu)
   function buildPreview() {
     if (!story) return null;
-    const storyWithMeta: DbStory = {
+    return mapStory({
       ...story,
       title:        meta.title,
       subtitle:     meta.subtitle    || null,
@@ -329,34 +383,24 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
       accent_color: meta.accent_color,
       published:    meta.published,
       story_frames: frames.map(f => ({
-        id:              f.id,
-        story_id:        f.story_id,
-        type:            f.type,
-        image_src:       f.image_src,
-        image_alt:       f.image_alt,
-        caption:         f.caption,
-        subcaption:      f.subcaption,
-        aircraft:        f.aircraft,
-        timestamp_label: f.timestamp_label,
-        stat_value:      f.stat_value,
-        stat_label:      f.stat_label,
-        fact_text:       f.fact_text,
-        sort_order:      f.sort_order,
-        duration:        f.duration,
+        id: f.id, story_id: f.story_id, type: f.type,
+        image_src: f.image_src, image_alt: f.image_alt,
+        caption: f.caption, subcaption: f.subcaption, aircraft: f.aircraft,
+        timestamp_label: f.timestamp_label, stat_value: f.stat_value,
+        stat_label: f.stat_label, fact_text: f.fact_text,
+        sort_order: f.sort_order, duration: f.duration,
       })),
-    };
-    return mapStory(storyWithMeta);
+    });
   }
 
-  const dirtyCount = frames.filter(f => f._dirty).length;
+  const dirtyCount  = frames.filter(f => f._dirty).length;
+  const previewData = buildPreview();
 
   if (loading) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"60vh" }}>
       <Loader2 size={28} style={{ animation:"spin 1s linear infinite", color:"var(--color-text-faint)" }}/>
     </div>
   );
-
-  const previewData = buildPreview();
 
   return (
     <>
@@ -387,7 +431,7 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
       `}</style>
 
       <div className="fe-page">
-        {/* Header */}
+        {/* ── Header ── */}
         <div style={{ display:"flex", alignItems:"center", gap:"var(--space-4)", marginBottom:"var(--space-6)", flexWrap:"wrap" }}>
           <button className="fe-btn" onClick={() => router.push("/admin/stories")}
             style={{ gap:"var(--space-2)", display:"flex", alignItems:"center", padding:"var(--space-2) var(--space-3)" }}>
@@ -399,7 +443,11 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
             </h1>
             <p style={{ fontSize:"var(--text-xs)", color:"var(--color-text-faint)", marginTop:2 }}>
               {frames.length} klatek
-              {dirtyCount > 0 && <span style={{ color:"var(--color-warning)", marginLeft:"var(--space-2)" }}>· {dirtyCount} niezapisanych zmian</span>}
+              {dirtyCount > 0 && (
+                <span style={{ color:"var(--color-warning)", marginLeft:"var(--space-2)" }}>
+                  · {dirtyCount} niezapisanych zmian
+                </span>
+              )}
             </p>
           </div>
           <div style={{ display:"flex", gap:"var(--space-2)" }}>
@@ -430,11 +478,10 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
 
         {/* ── Ustawienia relacji ── */}
         <div className="fe-section">
-          <p className="fe-label" style={{ marginBottom:"var(--space-5)", fontSize:"var(--text-sm)", color:"var(--color-text-muted)", textTransform:"none", letterSpacing:0, fontWeight:700 }}>
+          <p style={{ fontWeight:700, fontSize:"var(--text-sm)", color:"var(--color-text-muted)", marginBottom:"var(--space-5)" }}>
             Ustawienia relacji
           </p>
 
-          {/* Wiersz 1: tytuł, podtytuł, cover */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"var(--space-4)", marginBottom:"var(--space-4)" }}>
             <div>
               <label className="fe-label">Tytuł *</label>
@@ -448,22 +495,31 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
                 onChange={e => setMeta(m => ({ ...m, subtitle: e.target.value }))}/>
             </div>
             <div>
-              <label className="fe-label">Cover Image URL</label>
-              <input className="fe-input" placeholder="https://…"
-                value={meta.cover_image}
-                onChange={e => setMeta(m => ({ ...m, cover_image: e.target.value }))}/>
+              <label className="fe-label">Cover Image</label>
+              <div style={{ display:"flex", gap:"var(--space-2)" }}>
+                <input className="fe-input" placeholder="https://… lub wybierz z biblioteki"
+                  value={meta.cover_image}
+                  onChange={e => setMeta(m => ({ ...m, cover_image: e.target.value }))}/>
+                <PickBtn onClick={() => setPickerTarget("cover")}/>
+              </div>
             </div>
           </div>
 
           {/* Podgląd covera */}
           {meta.cover_image && (
-            <div style={{ borderRadius:"var(--radius-lg)", overflow:"hidden", height:120, background:"var(--color-surface-offset)", marginBottom:"var(--space-4)", border:"1px solid var(--color-border)" }}>
+            <div style={{ borderRadius:"var(--radius-lg)", overflow:"hidden", height:120, background:"var(--color-surface-offset)", marginBottom:"var(--space-4)", border:"1px solid var(--color-border)", position:"relative" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={meta.cover_image} alt="Cover" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+              <img src={meta.cover_image} alt="Cover"
+                style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+              <button
+                onClick={() => setMeta(m => ({ ...m, cover_image: "" }))}
+                title="Usuń cover"
+                style={{ position:"absolute", top:6, right:6, background:"rgba(0,0,0,.6)", border:"none", borderRadius:"50%", width:24, height:24, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#fff", fontSize:14, lineHeight:1 }}
+              >×</button>
             </div>
           )}
 
-          {/* Wiersz 2: kolor + status */}
+          {/* Kolor + publikacja */}
           <div style={{ display:"flex", gap:"var(--space-6)", alignItems:"center", flexWrap:"wrap" }}>
             <div>
               <label className="fe-label">Kolor akcentu</label>
@@ -499,8 +555,12 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
             </div>
           ) : frames.map((frame, i) => (
             <FrameEditor
-              key={frame.id} frame={frame} idx={i} total={frames.length}
-              onChange={updateFrame} onDelete={deleteFrame} onMove={moveFrame}
+              key={frame.id}
+              frame={frame} idx={i} total={frames.length}
+              onChange={updateFrame}
+              onDelete={deleteFrame}
+              onMove={moveFrame}
+              onOpenPicker={frameId => setPickerTarget(`frame:${frameId}`)}
             />
           ))}
         </div>
@@ -512,7 +572,10 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
             {FRAME_TYPES.map(t => (
               <button key={t.value} className="fe-add-btn" disabled={adding}
                 onClick={() => addFrame(t.value)} title={t.desc}>
-                {adding ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }}/> : t.icon}
+                {adding
+                  ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }}/>
+                  : t.icon
+                }
                 {t.label}
               </button>
             ))}
@@ -520,7 +583,17 @@ export default function StoryEditorPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {/* Podgląd */}
+      {/* ── MediaPicker ── */}
+      {pickerTarget && (
+        <MediaPicker
+          accept="image"
+          title={pickerTarget === "cover" ? "Wybierz cover relacji" : "Wybierz zdjęcie klatki"}
+          onSelect={handlePickerSelect}
+          onClose={() => setPickerTarget(null)}
+        />
+      )}
+
+      {/* ── StoryPlayer podgląd ── */}
       {preview && previewData && frames.length > 0 && (
         <StoryPlayer
           stories={[previewData]}
