@@ -8,6 +8,7 @@ import {
   Star, Tag, ArrowRight,
 } from "lucide-react";
 import PhotoGrid from "@/components/PhotoGrid";
+import StoriesBar from "@/components/stories/StoriesBar";
 
 // ── Typy ─────────────────────────────────────────────────────
 interface AirShow {
@@ -252,7 +253,10 @@ export default async function ShowPage({
           </div>
         </div>
       </div>
-
+{/* ── RELACJE POKAZU ── */}
+<div style={{ maxWidth:"var(--content-wide)", margin:"0 auto", padding:"0 var(--space-8)" }}>
+  <StoriesBar showId={show.id} showTitle={show.name} />
+</div>
       {/* ── OPIS + META ── */}
       <div className="show-body">
         {/* Statystyki */}

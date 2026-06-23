@@ -1,3 +1,6 @@
+// ─────────────────────────────────────────────────────────────
+// AIR SHOWS
+// ─────────────────────────────────────────────────────────────
 export interface DbAirShow {
   id:           string;
   name:         string;
@@ -14,20 +17,6 @@ export interface DbAirShow {
   updated_at:   string;
 }
 
-export interface DbPhoto {
-  id:         string;
-  show_id:    string;
-  src:        string;
-  alt:        string;
-  aircraft:   string;
-  width:      number;
-  height:     number;
-  tags:       string[];
-  featured:   boolean;
-  created_at: string;
-}
-
-// Mapowanie DB → frontend
 export function mapShow(s: DbAirShow) {
   return {
     id:          s.id,
@@ -44,6 +33,24 @@ export function mapShow(s: DbAirShow) {
   };
 }
 
+export type MappedShow = ReturnType<typeof mapShow>;
+
+// ─────────────────────────────────────────────────────────────
+// PHOTOS
+// ─────────────────────────────────────────────────────────────
+export interface DbPhoto {
+  id:         string;
+  show_id:    string;
+  src:        string;
+  alt:        string;
+  aircraft:   string;
+  width:      number;
+  height:     number;
+  tags:       string[];
+  featured:   boolean;
+  created_at: string;
+}
+
 export function mapPhoto(p: DbPhoto) {
   return {
     id:       p.id,
@@ -57,3 +64,79 @@ export function mapPhoto(p: DbPhoto) {
     featured: p.featured,
   };
 }
+
+export type MappedPhoto = ReturnType<typeof mapPhoto>;
+
+// ─────────────────────────────────────────────────────────────
+// STORIES
+// ─────────────────────────────────────────────────────────────
+export type FrameType = "photo" | "burst" | "text" | "stat" | "fact";
+
+export interface DbStoryFrame {
+  id:              string;
+  story_id:        string;
+  type:            FrameType;
+  image_src:       string | null;
+  image_alt:       string | null;
+  caption:         string | null;
+  subcaption:      string | null;
+  aircraft:        string | null;
+  timestamp_label: string | null;
+  stat_value:      string | null;
+  stat_label:      string | null;
+  fact_text:       string | null;
+  sort_order:      number;
+  duration:        number;
+}
+
+export interface DbStory {
+  id:           string;
+  show_id:      string;
+  title:        string;
+  subtitle:     string | null;
+  cover_image:  string | null;
+  accent_color: string;
+  published:    boolean;
+  sort_order:   number;
+  views:        number;
+  created_at:   string;
+  story_frames: DbStoryFrame[];
+}
+
+export function mapStoryFrame(f: DbStoryFrame) {
+  return {
+    id:             f.id,
+    storyId:        f.story_id,
+    type:           f.type,
+    imageSrc:       f.image_src,
+    imageAlt:       f.image_alt,
+    caption:        f.caption,
+    subcaption:     f.subcaption,
+    aircraft:       f.aircraft,
+    timestampLabel: f.timestamp_label,
+    statValue:      f.stat_value,
+    statLabel:      f.stat_label,
+    factText:       f.fact_text,
+    sortOrder:      f.sort_order,
+    duration:       f.duration,
+  };
+}
+
+export function mapStory(s: DbStory) {
+  return {
+    id:          s.id,
+    showId:      s.show_id,
+    title:       s.title,
+    subtitle:    s.subtitle,
+    coverImage:  s.cover_image,
+    accentColor: s.accent_color,
+    published:   s.published,
+    sortOrder:   s.sort_order,
+    views:       s.views,
+    createdAt:   s.created_at,
+    frames:      (s.story_frames ?? []).map(mapStoryFrame),
+  };
+}
+
+export type MappedStoryFrame = ReturnType<typeof mapStoryFrame>;
+export type MappedStory      = ReturnType<typeof mapStory>;

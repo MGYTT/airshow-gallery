@@ -1,38 +1,26 @@
 import HeroSection from "@/components/HeroSection";
 import ShowCard from "@/components/ShowCard";
+import StoriesBar from "@/components/stories/StoriesBar";
 import { Plane, ArrowRight, Camera } from "lucide-react";
 import Link from "next/link";
 
-// ── Typy ─────────────────────────────────────────────────────
 interface AirShow {
-  id: string;
-  name: string;
-  location: string;
-  date: string;
-  year: number;
-  description: string;
-  coverImage: string;
-  photoCount: number;
-  tags: string[];
-  featured: boolean;
-  published: boolean;
+  id: string; name: string; location: string; date: string;
+  year: number; description: string; coverImage: string;
+  photoCount: number; tags: string[]; featured: boolean; published: boolean;
 }
 
-// ── Fetch z Supabase REST ─────────────────────────────────────
 async function getShows(): Promise<AirShow[]> {
   const BASE    = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const API_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   try {
     const res = await fetch(
       `${BASE}/rest/v1/air_shows?published=eq.true&order=year.desc,id.asc`,
-      {
-        headers: { apikey: API_KEY, Authorization: `Bearer ${API_KEY}` },
-        next: { revalidate: 30 },
-      }
+      { headers: { apikey: API_KEY, Authorization: `Bearer ${API_KEY}` }, next: { revalidate: 30 } }
     );
     if (!res.ok) return [];
     const data: Record<string, unknown>[] = await res.json();
-    return data.map((s) => ({
+    return data.map(s => ({
       id:          s.id          as string,
       name:        s.name        as string,
       location:    s.location    as string,
@@ -51,35 +39,36 @@ async function getShows(): Promise<AirShow[]> {
   }
 }
 
-// ── Page (Server Component) ───────────────────────────────────
 export default async function Home() {
   const airShows    = await getShows();
-  const featured    = airShows.filter((s) => s.featured);
-  const rest        = airShows.filter((s) => !s.featured);
+  const featured    = airShows.filter(s => s.featured);
+  const rest        = airShows.filter(s => !s.featured);
   const totalPhotos = airShows.reduce((sum, s) => sum + s.photoCount, 0);
 
   return (
     <>
       <style>{`
-        .section-cta-link {
-          display: inline-flex; align-items: center; gap: var(--space-2);
-          font-size: var(--text-xs); font-weight: 700; color: var(--color-accent);
-          text-decoration: none; letter-spacing: 0.04em; text-transform: uppercase;
-          transition: gap 0.2s ease, opacity 0.2s ease;
-        }
-        .section-cta-link:hover { gap: var(--space-3); opacity: 0.8; }
-        .timeline-row {
-          display: flex; gap: var(--space-4); align-items: center;
-          padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg);
-          transition: transform 0.2s ease;
-        }
-        .timeline-row:hover { transform: translateX(4px); }
+        .section-cta-link{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);font-weight:700;color:var(--color-accent);text-decoration:none;letter-spacing:.04em;text-transform:uppercase;transition:gap .2s ease,opacity .2s ease}
+        .section-cta-link:hover{gap:var(--space-3);opacity:.8}
+        .timeline-row{display:flex;gap:var(--space-4);align-items:center;padding:var(--space-3) var(--space-4);border-radius:var(--radius-lg);transition:transform .2s ease}
+        .timeline-row:hover{transform:translateX(4px)}
+
+        /* ── Stories bar ── */
+        .stories-section{padding:var(--space-6) 0 0}
+        .stories-section .container{border-bottom:1px solid var(--color-divider);padding-bottom:var(--space-4)}
       `}</style>
 
       <HeroSection />
 
-      {/* ═══ SEKCJA POKAZÓW ═══ */}
-      <section id="pokazy" style={{ padding: "clamp(var(--space-16), 8vw, var(--space-32)) 0" }}>
+      {/* ═══ RELACJE ═══ */}
+      <section className="stories-section">
+        <div className="container">
+          <StoriesBar />
+        </div>
+      </section>
+
+      {/* ═══ POKAZY ═══ */}
+      <section id="pokazy" style={{ padding:"clamp(var(--space-16),8vw,var(--space-32)) 0" }}>
         <div className="container">
 
           {/* Header */}
@@ -105,8 +94,8 @@ export default async function Home() {
 
           {/* Featured grid */}
           {featured.length > 0 ? (
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(min(400px, 100%), 1fr))", gap:"var(--space-6)", marginBottom:"var(--space-20)" }}>
-              {featured.map((show) => <ShowCard key={show.id} show={show} featured/>)}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(400px,100%),1fr))", gap:"var(--space-6)", marginBottom:"var(--space-20)" }}>
+              {featured.map(show => <ShowCard key={show.id} show={show} featured/>)}
             </div>
           ) : (
             <p style={{ color:"var(--color-text-faint)", fontSize:"var(--text-sm)", marginBottom:"var(--space-20)" }}>
@@ -114,18 +103,18 @@ export default async function Home() {
             </p>
           )}
 
-          {/* Divider */}
+          {/* Divider + pozostałe */}
           {rest.length > 0 && (
             <>
               <div style={{ display:"flex", alignItems:"center", gap:"var(--space-4)", marginBottom:"var(--space-10)" }}>
-                <div style={{ flex:1, height:1, background:"linear-gradient(to right, var(--color-accent), var(--color-divider))" }}/>
-                <span style={{ fontSize:"var(--text-xs)", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", color:"var(--color-text-faint)", whiteSpace:"nowrap" }}>
+                <div style={{ flex:1, height:1, background:"linear-gradient(to right,var(--color-accent),var(--color-divider))" }}/>
+                <span style={{ fontSize:"var(--text-xs)", fontWeight:700, textTransform:"uppercase", letterSpacing:".12em", color:"var(--color-text-faint)", whiteSpace:"nowrap" }}>
                   Pozostałe pokazy
                 </span>
                 <div style={{ flex:1, height:1, background:"var(--color-divider)" }}/>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(min(300px, 100%), 1fr))", gap:"var(--space-6)" }}>
-                {rest.map((show) => <ShowCard key={show.id} show={show}/>)}
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(300px,100%),1fr))", gap:"var(--space-6)" }}>
+                {rest.map(show => <ShowCard key={show.id} show={show}/>)}
               </div>
             </>
           )}
@@ -144,12 +133,12 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ═══ SEKCJA O MNIE ═══ */}
-      <section id="o-mnie" style={{ padding:"clamp(var(--space-16), 8vw, var(--space-32)) 0", background:"var(--color-surface)", borderTop:"1px solid var(--color-divider)", borderBottom:"1px solid var(--color-divider)", position:"relative", overflow:"hidden" }}>
-        <div aria-hidden="true" style={{ position:"absolute", right:"-2%", bottom:"-10%", fontFamily:"var(--font-display)", fontWeight:900, fontSize:"clamp(8rem, 22vw, 22rem)", lineHeight:1, color:"var(--color-text)", opacity:0.025, userSelect:"none", pointerEvents:"none", letterSpacing:"-0.06em" }}>NT</div>
+      {/* ═══ O MNIE ═══ */}
+      <section id="o-mnie" style={{ padding:"clamp(var(--space-16),8vw,var(--space-32)) 0", background:"var(--color-surface)", borderTop:"1px solid var(--color-divider)", borderBottom:"1px solid var(--color-divider)", position:"relative", overflow:"hidden" }}>
+        <div aria-hidden="true" style={{ position:"absolute", right:"-2%", bottom:"-10%", fontFamily:"var(--font-display)", fontWeight:900, fontSize:"clamp(8rem,22vw,22rem)", lineHeight:1, color:"var(--color-text)", opacity:.025, userSelect:"none", pointerEvents:"none", letterSpacing:"-0.06em" }}>NT</div>
         <div className="container--narrow" style={{ position:"relative", zIndex:1 }}>
           <div style={{ display:"grid", gridTemplateColumns:"3px 1fr", gap:"var(--space-8)", alignItems:"start" }}>
-            <div style={{ width:3, background:"linear-gradient(to bottom, var(--color-accent), transparent)", borderRadius:"var(--radius-full)", alignSelf:"stretch" }}/>
+            <div style={{ width:3, background:"linear-gradient(to bottom,var(--color-accent),transparent)", borderRadius:"var(--radius-full)", alignSelf:"stretch" }}/>
             <div>
               <span className="badge" style={{ marginBottom:"var(--space-5)" }}>O mnie</span>
               <h2 style={{ fontFamily:"var(--font-display)", fontWeight:900, fontSize:"var(--text-2xl)", letterSpacing:"-0.04em", lineHeight:1.05, marginBottom:"var(--space-8)" }}>
@@ -162,16 +151,16 @@ export default async function Home() {
               <p style={{ fontSize:"var(--text-base)", color:"var(--color-text-muted)", lineHeight:1.8, marginBottom:"var(--space-8)" }}>
                 W 2025 roku spełniłem marzenie i pojechałem na <strong style={{ color:"var(--color-accent)" }}>NATO Days w Ostrawie</strong> — jeden z największych pokazów militarnych w Europie Środkowej. Aparat nigdy nie opuszcza mojej torby. Ta strona to mój prywatny album — wspomnienia, które chcę zachować i podzielić się nimi z innymi miłośnikami lotnictwa.
               </p>
-              <p style={{ fontSize:"var(--text-xs)", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--color-text-faint)", marginBottom:"var(--space-3)" }}>Kluczowe momenty</p>
+              <p style={{ fontSize:"var(--text-xs)", fontWeight:700, textTransform:"uppercase", letterSpacing:".1em", color:"var(--color-text-faint)", marginBottom:"var(--space-3)" }}>Kluczowe momenty</p>
               <div style={{ display:"flex", flexDirection:"column", gap:"var(--space-3)" }}>
                 {[
                   { year:"dzieciństwo", event:"Pierwsze Pikniki Lotnicze — Aeroklub Nowy Targ", accent:false },
                   { year:"2025",        event:"NATO Days — Ostrava, Czechy",                     accent:true  },
                 ].map(({ year, event, accent }) => (
-                  <div key={year} className="timeline-row" style={{ border:`1px solid ${accent ? "var(--color-accent)" : "var(--color-border)"}`, background: accent ? "var(--color-accent-subtle)" : "var(--color-surface-offset)" }}>
-                    <span style={{ fontFamily:"var(--font-display)", fontWeight:900, fontSize:"var(--text-xs)", color: accent ? "var(--color-accent)" : "var(--color-text-faint)", letterSpacing:"0.04em", textTransform:"uppercase", minWidth:90, flexShrink:0 }}>{year}</span>
-                    <span style={{ width:1, height:20, background: accent ? "var(--color-accent)" : "var(--color-divider)", flexShrink:0 }}/>
-                    <span style={{ fontSize:"var(--text-sm)", fontWeight:500, color: accent ? "var(--color-text)" : "var(--color-text-muted)" }}>{event}</span>
+                  <div key={year} className="timeline-row" style={{ border:`1px solid ${accent?"var(--color-accent)":"var(--color-border)"}`, background:accent?"var(--color-accent-subtle)":"var(--color-surface-offset)" }}>
+                    <span style={{ fontFamily:"var(--font-display)", fontWeight:900, fontSize:"var(--text-xs)", color:accent?"var(--color-accent)":"var(--color-text-faint)", letterSpacing:".04em", textTransform:"uppercase", minWidth:90, flexShrink:0 }}>{year}</span>
+                    <span style={{ width:1, height:20, background:accent?"var(--color-accent)":"var(--color-divider)", flexShrink:0 }}/>
+                    <span style={{ fontSize:"var(--text-sm)", fontWeight:500, color:accent?"var(--color-text)":"var(--color-text-muted)" }}>{event}</span>
                   </div>
                 ))}
               </div>
