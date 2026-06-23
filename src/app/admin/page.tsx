@@ -5,7 +5,7 @@ import {
   Images, Clapperboard, Star, TrendingUp,
   ArrowRight, Clock, Upload, Settings,
   ExternalLink, Eye, CheckCircle2, Globe,
-  Plane, Camera, Loader2,
+  Plane, Camera, Loader2, Play,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -52,11 +52,12 @@ export default function AdminDashboard() {
   ];
 
   const QUICK_ACTIONS = [
-    { href: "/admin/photos/upload", label: "Dodaj nowe zdjęcia",       desc: "Upload z dysku lub przeciągnij pliki",  icon: Upload,      accent: true,  external: false },
-    { href: "/admin/shows",         label: "Zarządzaj pokazami",        desc: "Edytuj, ukryj, wyróżnij pokazy",       icon: Clapperboard,accent: false, external: false },
-    { href: "/admin/settings",      label: "Ustawienia strony",         desc: "Konfiguracja, motyw, dane autora",     icon: Settings,    accent: false, external: false },
-    { href: "/",                    label: "Podgląd strony publicznej", desc: "Otwórz stronę w nowej karcie",        icon: ExternalLink, accent: false, external: true  },
-  ];
+  { href: "/admin/photos/upload", label: "Dodaj nowe zdjęcia",       desc: "Upload z dysku lub przeciągnij pliki",      icon: Upload,      accent: true,  external: false },
+  { href: "/admin/shows",         label: "Zarządzaj pokazami",        desc: "Edytuj, ukryj, wyróżnij pokazy",           icon: Clapperboard,accent: false, external: false },
+  { href: "/admin/stories",       label: "Zarządzaj relacjami",       desc: "Twórz i edytuj relacje fotograficzne",      icon: Play,        accent: false, external: false, stories: true },
+  { href: "/admin/settings",      label: "Ustawienia strony",         desc: "Konfiguracja, motyw, dane autora",         icon: Settings,    accent: false, external: false },
+  { href: "/",                    label: "Podgląd strony publicznej", desc: "Otwórz stronę w nowej karcie",            icon: ExternalLink, accent: false, external: true  },
+];
 
   const CHECKLIST = [
     { label: "Dodaj przynajmniej 1 pokaz",   done: shows.length > 0 },
@@ -110,6 +111,10 @@ export default function AdminDashboard() {
         .pub-banner { border-radius:var(--radius-xl); padding:var(--space-5) var(--space-6); display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; margin-bottom:var(--space-6); border:1px solid; }
         .pub-banner.ready { background:rgba(34,197,94,0.07); border-color:rgba(34,197,94,0.3); }
         .pub-banner.not-ready { background:var(--color-accent-subtle); border-color:var(--color-accent); }
+        .quick-btn.stories { background: oklch(from var(--color-primary) l c h / .06); border-color: oklch(from var(--color-primary) l c h / .3); }
+.quick-btn.stories:hover { background: var(--color-primary); color: #fff; border-color: transparent; }
+.quick-btn.stories:hover .qa-icon { color: #fff !important; }
+.quick-btn.stories:hover p { color: rgba(255,255,255,.75) !important; }
       `}</style>
 
       {/* Title */}
@@ -203,17 +208,25 @@ export default function AdminDashboard() {
               <p style={{ fontSize:"var(--text-sm)", fontWeight:700 }}>Szybkie akcje</p>
             </div>
             <div style={{ padding:"var(--space-4)", display:"flex", flexDirection:"column", gap:"var(--space-2)" }}>
-              {QUICK_ACTIONS.map(({ href, label, desc, icon: Icon, accent, external }) => (
-                <Link key={href} href={href} className={`quick-btn ${accent?"accent":""}`}
-                  {...(external ? { target:"_blank", rel:"noopener noreferrer" } : {})}>
-                  <Icon size={16} className="qa-icon" style={{ color:accent?"var(--color-accent)":"var(--color-text-faint)", flexShrink:0 }}/>
-                  <div style={{ minWidth:0 }}>
-                    <p style={{ fontSize:"var(--text-sm)", fontWeight:600, lineHeight:1.3 }}>{label}</p>
-                    <p style={{ fontSize:"var(--text-xs)", color:"var(--color-text-faint)", marginTop:2 }}>{desc}</p>
-                  </div>
-                  <ArrowRight size={13} style={{ color:"var(--color-text-faint)", flexShrink:0, marginLeft:"auto" }}/>
-                </Link>
-              ))}
+              {QUICK_ACTIONS.map(({ href, label, desc, icon: Icon, accent, external, stories }) => (
+  <Link
+    key={href}
+    href={href}
+    className={`quick-btn ${accent ? "accent" : ""} ${stories ? "stories" : ""}`}
+    {...(external ? { target:"_blank", rel:"noopener noreferrer" } : {})}
+  >
+    <Icon
+      size={16}
+      className="qa-icon"
+      style={{ color: stories ? "var(--color-primary)" : accent ? "var(--color-accent)" : "var(--color-text-faint)", flexShrink:0 }}
+    />
+    <div style={{ minWidth:0 }}>
+      <p style={{ fontSize:"var(--text-sm)", fontWeight:600, lineHeight:1.3 }}>{label}</p>
+      <p style={{ fontSize:"var(--text-xs)", color:"var(--color-text-faint)", marginTop:2 }}>{desc}</p>
+    </div>
+    <ArrowRight size={13} style={{ color:"var(--color-text-faint)", flexShrink:0, marginLeft:"auto" }}/>
+  </Link>
+))}
             </div>
           </div>
 
