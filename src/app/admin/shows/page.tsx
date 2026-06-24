@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   Search, Star, Trash2, Check, X, Plus,
   Eye, EyeOff, MapPin, Calendar, Images,
-  Pencil, Loader2, AlertCircle,
+  Pencil, Loader2, AlertCircle, Upload, Link2,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────
@@ -46,9 +46,7 @@ const EMPTY: Omit<Show,"id"|"photoCount"> = {
   coverImage:"", featured:false, published:true, tags:[],
 };
 
-// ── Helpers ──────────────────────────────────────────────────
 function parseCountry(location: string): { loc: string; country: string } {
-  // API zwraca location jako "Radom, Polska" — rozdziel
   const parts = location.split(",").map(s => s.trim());
   if (parts.length >= 2) {
     const last = parts[parts.length - 1];
@@ -70,8 +68,8 @@ function mapApiShow(s: Record<string, unknown>): Show {
     year:        s.year        as number,
     location:    loc,
     country,
-    description: s.description as string ?? "",
-    coverImage:  s.coverImage  as string ?? "",
+    description: (s.description as string) ?? "",
+    coverImage:  (s.coverImage  as string) ?? "",
     featured:    Boolean(s.featured),
     published:   Boolean(s.published),
     tags:        (s.tags as string[]) ?? [],
@@ -95,10 +93,15 @@ export default function AdminShows() {
   const [deleteModal, setDeleteModal] = useState<string | null>(null);
   const [tagInput, setTagInput]     = useState("");
 
-  // ── Fetch z Supabase przez API ──────────────────────────────
+  // Cover image upload state
+  const [coverTab, setCoverTab]         = useState<"url"|"upload">("upload");
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverDragOver, setCoverDragOver]   = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Fetch ───────────────────────────────────────────────────
   const loadShows = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const res = await fetch("/api/shows?all=true", { headers: adminHeaders(false) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -122,19 +125,57 @@ export default function AdminShows() {
     return mQ && mF && mP;
   }), [shows, search, filterFeat, filterPub]);
 
+  // ── Cover image upload ──────────────────────────────────────
+  async function uploadCover(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setError("Cover musi być plikiem graficznym (JPG, PNG, WebP)"); return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setError("Cover za duży (max 20MB)"); return;
+    }
+
+    setCoverUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file",   file);
+      fd.append("showId", "covers"); // osobny folder w Storage
+      fd.append("alt",    editShow?.name ?? "cover");
+
+      const res = await fetch("/api/upload/cover", {
+        method: "POST",
+        body: fd,
+        // Uwierzytelnienie przez cookie (admin_session) — tak jak obecny /api/upload
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? "Błąd uploadu");
+      }
+
+      const { url } = await res.json();
+      setEditShow(p => p ? { ...p, coverImage: url } : p);
+    } catch (e) {
+      setError(`Upload covera: ${e}`);
+    } finally {
+      setCoverUploading(false);
+    }
+  }
+
+  function handleCoverFile(file: File | null | undefined) {
+    if (file) uploadCover(file);
+  }
+
   // ── API mutations ───────────────────────────────────────────
   async function apiPatch(id: string, patch: Partial<Show>) {
-    // Optymistyczny update UI
     setShows(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
     try {
-      const body = { ...patch };
-      // Scal location + country przed wysłaniem do API
+      const body = { ...patch } as Record<string, unknown>;
       if (patch.location !== undefined || patch.country !== undefined) {
         const show = shows.find(s => s.id === id)!;
         const loc  = patch.location ?? show.location;
         const ctr  = patch.country  ?? show.country;
-        (body as Record<string, unknown>).location = `${loc}, ${ctr}`;
-        delete (body as Record<string, unknown>).country;
+        body.location = `${loc}, ${ctr}`;
+        delete body.country;
       }
       const res = await fetch(`/api/shows/${id}`, {
         method: "PATCH",
@@ -144,7 +185,7 @@ export default function AdminShows() {
       if (!res.ok) throw new Error((await res.json()).error);
     } catch (e) {
       setError(`Błąd zapisu: ${e}`);
-      await loadShows(); // cofnij optymistyczny update
+      await loadShows();
     }
   }
 
@@ -175,47 +216,35 @@ export default function AdminShows() {
     }
   }
 
-  // ── Save (new or edit) ───────────────────────────────────────
+  // ── Save ─────────────────────────────────────────────────────
   async function saveShow() {
     if (!editShow) return;
     setSaving(true);
     try {
       const locationFull = `${editShow.location}, ${editShow.country}`;
+      const payload = {
+        name:        editShow.name,
+        location:    locationFull,
+        date:        editShow.date,
+        year:        editShow.year,
+        description: editShow.description,
+        coverImage:  editShow.coverImage,
+        tags:        editShow.tags,
+        featured:    editShow.featured,
+        published:   editShow.published,
+      };
 
       if (isNew) {
         const id = slugify(editShow.name) || `show-${Date.now()}`;
-        const payload = {
-          id,
-          name:        editShow.name,
-          location:    locationFull,
-          date:        editShow.date,
-          year:        editShow.year,
-          description: editShow.description,
-          coverImage:  editShow.coverImage,
-          tags:        editShow.tags,
-          featured:    editShow.featured,
-          published:   editShow.published,
-        };
         const res = await fetch("/api/shows", {
           method: "POST",
           headers: adminHeaders(),
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ id, ...payload }),
         });
         if (!res.ok) throw new Error((await res.json()).error);
         const created = await res.json();
         setShows(prev => [mapApiShow(created), ...prev]);
       } else {
-        const payload = {
-          name:        editShow.name,
-          location:    locationFull,
-          date:        editShow.date,
-          year:        editShow.year,
-          description: editShow.description,
-          coverImage:  editShow.coverImage,
-          tags:        editShow.tags,
-          featured:    editShow.featured,
-          published:   editShow.published,
-        };
         const res = await fetch(`/api/shows/${editShow.id}`, {
           method: "PATCH",
           headers: adminHeaders(),
@@ -233,7 +262,7 @@ export default function AdminShows() {
     }
   }
 
-  // ── Tag helpers ──────────────────────────────────────────────
+  // ── Tags ─────────────────────────────────────────────────────
   function addTag() {
     const t = tagInput.trim();
     if (!t || !editShow || editShow.tags.includes(t)) return;
@@ -246,10 +275,10 @@ export default function AdminShows() {
 
   function openNew() {
     setEditShow({ ...EMPTY, id: "", photoCount: 0 });
-    setTagInput(""); setIsNew(true);
+    setTagInput(""); setCoverTab("upload"); setIsNew(true);
   }
   function openEdit(show: Show) {
-    setEditShow({ ...show }); setTagInput(""); setIsNew(false);
+    setEditShow({ ...show }); setTagInput(""); setCoverTab(show.coverImage ? "url" : "upload"); setIsNew(false);
   }
   function toggle(id: string) {
     setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
@@ -257,7 +286,7 @@ export default function AdminShows() {
 
   const canSave = editShow && editShow.name.trim() && editShow.location.trim();
 
-  // ── Render states ────────────────────────────────────────────
+  // ── Loading ──────────────────────────────────────────────────
   if (loading) return (
     <div style={{ minHeight:"40dvh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:"var(--space-4)", color:"var(--color-text-faint)" }}>
       <Loader2 size={28} style={{ animation:"spin 1s linear infinite" }}/>
@@ -299,39 +328,52 @@ export default function AdminShows() {
         .toggle-row { display:flex;align-items:center;justify-content:space-between;padding:var(--space-4);background:var(--color-surface-offset);border-radius:var(--radius-lg);border:1px solid var(--color-border); }
         .toggle-sw { width:44px;height:24px;border-radius:var(--radius-full);position:relative;cursor:pointer;border:none;transition:background .2s; }
         .toggle-th { position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:var(--radius-full);background:#fff;transition:transform .2s cubic-bezier(.16,1,.3,1);box-shadow:0 1px 3px rgba(0,0,0,.3); }
+
+        /* ── Cover upload ── */
+        .cover-tabs { display:flex; gap:2px; padding:2px; background:var(--color-surface-offset); border-radius:var(--radius-lg); width:fit-content; margin-bottom:var(--space-3); }
+        .cover-tab  { padding:var(--space-1) var(--space-4); border-radius:calc(var(--radius-md) - 1px); font-size:var(--text-xs); font-weight:700; cursor:pointer; border:none; background:none; color:var(--color-text-muted); transition:background .15s,color .15s; display:inline-flex; align-items:center; gap:var(--space-2); }
+        .cover-tab.on { background:var(--color-surface); color:var(--color-text); box-shadow:var(--shadow-sm); }
+
+        .cover-dropzone { border:2px dashed var(--color-border); border-radius:var(--radius-lg); padding:var(--space-8) var(--space-6); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-3); cursor:pointer; transition:border-color .15s,background .15s; text-align:center; }
+        .cover-dropzone:hover, .cover-dropzone.drag { border-color:var(--color-accent); background:var(--color-accent-subtle); }
+        .cover-dropzone-icon { width:40px; height:40px; border-radius:var(--radius-lg); background:var(--color-surface-offset); display:flex; align-items:center; justify-content:center; color:var(--color-accent); }
+        .cover-dropzone p { font-size:var(--text-xs); color:var(--color-text-muted); line-height:1.6; }
+        .cover-dropzone strong { color:var(--color-text); font-weight:700; }
+
+        .cover-preview { position:relative; border-radius:var(--radius-lg); overflow:hidden; aspect-ratio:16/7; background:var(--color-surface-offset); }
+        .cover-preview img { width:100%; height:100%; object-fit:cover; display:block; }
+        .cover-preview-remove { position:absolute; top:var(--space-2); right:var(--space-2); background:rgba(0,0,0,.7); border:none; border-radius:var(--radius-full); width:28px; height:28px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#fff; transition:background .15s; }
+        .cover-preview-remove:hover { background:rgba(239,68,68,.9); }
+        .cover-uploading { display:flex; align-items:center; justify-content:center; gap:var(--space-3); padding:var(--space-6); color:var(--color-text-muted); font-size:var(--text-sm); }
+
         @keyframes spin { to { transform:rotate(360deg); } }
       `}</style>
 
-      {/* ── Error banner ─────────────────────────────────────────── */}
+      {/* ── Error banner ── */}
       {error && (
         <div style={{ display:"flex",alignItems:"center",gap:"var(--space-3)",padding:"var(--space-3) var(--space-4)",background:"rgba(239,68,68,.08)",border:"1px solid rgba(239,68,68,.25)",borderRadius:"var(--radius-lg)",marginBottom:"var(--space-4)",fontSize:"var(--text-xs)",color:"#ef4444",fontWeight:600 }}>
-          <AlertCircle size={14}/>
-          {error}
+          <AlertCircle size={14}/>{error}
           <button onClick={() => setError(null)} style={{ marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:"#ef4444",display:"flex" }}><X size={13}/></button>
         </div>
       )}
 
-      {/* ── Page header ──────────────────────────────────────────── */}
+      {/* ── Page header ── */}
       <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"var(--space-6)",flexWrap:"wrap",gap:"var(--space-3)" }}>
         <div>
-          <h1 style={{ fontFamily:"var(--font-display)",fontWeight:900,fontSize:"var(--text-xl)",letterSpacing:"-0.03em" }}>
-            Pokazy lotnicze
-          </h1>
+          <h1 style={{ fontFamily:"var(--font-display)",fontWeight:900,fontSize:"var(--text-xl)",letterSpacing:"-0.03em" }}>Pokazy lotnicze</h1>
           <p style={{ fontSize:"var(--text-sm)",color:"var(--color-text-muted)" }}>
             {shows.length} pokazów · {shows.filter(s=>s.featured).length} wyróżnione · {shows.filter(s=>!s.published).length} ukryte
           </p>
         </div>
         <div style={{ display:"flex",gap:"var(--space-2)" }}>
-          <button onClick={loadShows} style={{ display:"flex",alignItems:"center",gap:"var(--space-2)",padding:"var(--space-2) var(--space-4)",borderRadius:"var(--radius-md)",border:"1px solid var(--color-border)",background:"transparent",cursor:"pointer",color:"var(--color-text-muted)",fontSize:"var(--text-sm)",fontWeight:600 }}>
-            Odśwież
-          </button>
-          <button style={{ display:"flex",alignItems:"center",gap:"var(--space-2)",padding:"var(--space-2) var(--space-4)",borderRadius:"var(--radius-md)",background:"var(--color-accent)",color:"#fff",border:"none",cursor:"pointer",fontSize:"var(--text-sm)",fontWeight:700 }} onClick={openNew}>
+          <button onClick={loadShows} style={{ display:"flex",alignItems:"center",gap:"var(--space-2)",padding:"var(--space-2) var(--space-4)",borderRadius:"var(--radius-md)",border:"1px solid var(--color-border)",background:"transparent",cursor:"pointer",color:"var(--color-text-muted)",fontSize:"var(--text-sm)",fontWeight:600 }}>Odśwież</button>
+          <button onClick={openNew} style={{ display:"flex",alignItems:"center",gap:"var(--space-2)",padding:"var(--space-2) var(--space-4)",borderRadius:"var(--radius-md)",background:"var(--color-accent)",color:"#fff",border:"none",cursor:"pointer",fontSize:"var(--text-sm)",fontWeight:700 }}>
             <Plus size={15}/> Nowy pokaz
           </button>
         </div>
       </div>
 
-      {/* ── Toolbar ──────────────────────────────────────────────── */}
+      {/* ── Toolbar ── */}
       <div style={{ display:"flex",alignItems:"center",gap:"var(--space-3)",flexWrap:"wrap",marginBottom:"var(--space-5)" }}>
         <div style={{ position:"relative",flex:1,minWidth:200 }}>
           <Search size={14} style={{ position:"absolute",left:"var(--space-3)",top:"50%",transform:"translateY(-50%)",color:"var(--color-text-faint)",pointerEvents:"none" }}/>
@@ -350,7 +392,7 @@ export default function AdminShows() {
         </select>
       </div>
 
-      {/* ── Selection bar ────────────────────────────────────────── */}
+      {/* ── Selection bar ── */}
       {selected.size > 0 && (
         <div style={{ display:"flex",alignItems:"center",gap:"var(--space-3)",padding:"var(--space-3) var(--space-4)",background:"var(--color-accent-subtle)",border:"1px solid var(--color-border)",borderRadius:"var(--radius-lg)",marginBottom:"var(--space-4)",flexWrap:"wrap" }}>
           <span style={{ fontSize:"var(--text-sm)",fontWeight:600,color:"var(--color-accent)" }}>{selected.size} zaznaczonych</span>
@@ -364,18 +406,21 @@ export default function AdminShows() {
         </div>
       )}
 
-      {/* ── Cards grid ───────────────────────────────────────────── */}
+      {/* ── Cards grid ── */}
       <div className="shows-grid">
         {filtered.map(show => (
           <div key={show.id} className={`show-card ${selected.has(show.id)?"selected":""} ${!show.published?"unpublished":""}`}>
             <div className="show-cover">
               {show.coverImage
                 ? <img src={show.coverImage} alt={show.name} loading="lazy"/>
-                : <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center" }}><Images size={32} style={{ color:"var(--color-text-faint)" }}/></div>
+                : <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"var(--space-2)" }}>
+                    <Images size={28} style={{ color:"var(--color-text-faint)" }}/>
+                    <span style={{ fontSize:10,color:"var(--color-text-faint)",fontWeight:600 }}>Brak miniatury</span>
+                  </div>
               }
               <div className="cover-overlay"/>
               <div className="cover-badges">
-                {show.featured  && <span className="badge-pill pill-gold"><Star size={9} fill="#fff"/> Featured</span>}
+                {show.featured   && <span className="badge-pill pill-gold"><Star size={9} fill="#fff"/> Featured</span>}
                 {!show.published && <span className="badge-pill pill-red"><EyeOff size={9}/> Ukryty</span>}
               </div>
               <div className="cover-actions">
@@ -410,7 +455,7 @@ export default function AdminShows() {
         ))}
       </div>
 
-      {/* ── Empty state ───────────────────────────────────────────── */}
+      {/* ── Empty state ── */}
       {filtered.length===0&&!loading&&(
         <div style={{ textAlign:"center",padding:"var(--space-20) var(--space-8)",color:"var(--color-text-muted)" }}>
           <Search size={36} style={{ margin:"0 auto var(--space-4)",color:"var(--color-text-faint)" }}/>
@@ -420,19 +465,26 @@ export default function AdminShows() {
         </div>
       )}
 
-      {/* ── Edit / New modal ──────────────────────────────────────── */}
-      {editShow&&(
+      {/* ══════════════════════════════════════════
+          MODAL EDYCJI / NOWY POKAZ
+      ══════════════════════════════════════════ */}
+      {editShow && (
         <div className="modal-bg" onClick={()=>setEditShow(null)}>
           <div className="modal-sheet" onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
               <h2 style={{ fontFamily:"var(--font-display)",fontWeight:900,fontSize:"var(--text-lg)",letterSpacing:"-0.02em" }}>{isNew?"Nowy pokaz":"Edytuj pokaz"}</h2>
               <button onClick={()=>setEditShow(null)} style={{ background:"none",border:"none",cursor:"pointer",color:"var(--color-text-faint)",display:"flex",padding:"var(--space-1)" }}><X size={16}/></button>
             </div>
+
             <div className="modal-body">
+
+              {/* Nazwa */}
               <div>
                 <label className="field-label">Nazwa pokazu *</label>
                 <input className="input" placeholder="np. Radom Air Show 2025" value={editShow.name} onChange={e=>setEditShow(p=>p?{...p,name:e.target.value}:p)}/>
               </div>
+
+              {/* Lokalizacja + kraj */}
               <div className="form-row">
                 <div>
                   <label className="field-label">Lokalizacja *</label>
@@ -445,6 +497,8 @@ export default function AdminShows() {
                   </select>
                 </div>
               </div>
+
+              {/* Data + rok */}
               <div className="form-row">
                 <div>
                   <label className="field-label">Data</label>
@@ -455,15 +509,97 @@ export default function AdminShows() {
                   <input className="input" type="number" min={1950} max={2100} value={editShow.year} onChange={e=>setEditShow(p=>p?{...p,year:Number(e.target.value)}:p)}/>
                 </div>
               </div>
+
+              {/* ── COVER IMAGE — upload lub URL ── */}
               <div>
-                <label className="field-label">Zdjęcie okładkowe (URL)</label>
-                <input className="input" placeholder="https://…" value={editShow.coverImage} onChange={e=>setEditShow(p=>p?{...p,coverImage:e.target.value}:p)}/>
-                {editShow.coverImage&&<div style={{ marginTop:"var(--space-3)",borderRadius:"var(--radius-lg)",overflow:"hidden",aspectRatio:"16/7",background:"var(--color-surface-offset)" }}><img src={editShow.coverImage} alt="Preview" style={{ width:"100%",height:"100%",objectFit:"cover",display:"block" }} onError={e=>(e.currentTarget.style.display="none")}/></div>}
+                <label className="field-label">Miniatura pokazu</label>
+
+                {/* Przełącznik Upload / URL */}
+                <div className="cover-tabs">
+                  <button className={`cover-tab ${coverTab==="upload"?"on":""}`} onClick={()=>setCoverTab("upload")}>
+                    <Upload size={12}/> Prześlij plik
+                  </button>
+                  <button className={`cover-tab ${coverTab==="url"?"on":""}`} onClick={()=>setCoverTab("url")}>
+                    <Link2 size={12}/> Wklej URL
+                  </button>
+                </div>
+
+                {/* Podgląd jeśli jest już cover */}
+                {editShow.coverImage && (
+                  <div className="cover-preview" style={{ marginBottom:"var(--space-3)" }}>
+                    <img
+                      src={editShow.coverImage}
+                      alt="Miniatura pokazu"
+                      onError={e=>(e.currentTarget.style.display="none")}
+                    />
+                    <button
+                      className="cover-preview-remove"
+                      title="Usuń miniaturę"
+                      onClick={()=>setEditShow(p=>p?{...p,coverImage:""}:p)}
+                    >
+                      <X size={13}/>
+                    </button>
+                  </div>
+                )}
+
+                {/* ── TAB: UPLOAD ── */}
+                {coverTab === "upload" && (
+                  <>
+                    {coverUploading ? (
+                      <div className="cover-uploading">
+                        <Loader2 size={18} style={{ animation:"spin 1s linear infinite",color:"var(--color-accent)" }}/>
+                        Przesyłanie miniatury…
+                      </div>
+                    ) : (
+                      <div
+                        className={`cover-dropzone ${coverDragOver?"drag":""}`}
+                        onClick={()=>coverInputRef.current?.click()}
+                        onDragOver={e=>{e.preventDefault();setCoverDragOver(true);}}
+                        onDragLeave={()=>setCoverDragOver(false)}
+                        onDrop={e=>{
+                          e.preventDefault();
+                          setCoverDragOver(false);
+                          handleCoverFile(e.dataTransfer.files[0]);
+                        }}
+                      >
+                        <div className="cover-dropzone-icon">
+                          <Upload size={18}/>
+                        </div>
+                        <p>
+                          <strong>Kliknij lub przeciągnij</strong> zdjęcie tutaj<br/>
+                          JPG, PNG, WebP · max 20 MB
+                        </p>
+                      </div>
+                    )}
+                    {/* Ukryty input */}
+                    <input
+                      ref={coverInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/avif"
+                      style={{ display:"none" }}
+                      onChange={e=>handleCoverFile(e.target.files?.[0])}
+                    />
+                  </>
+                )}
+
+                {/* ── TAB: URL ── */}
+                {coverTab === "url" && (
+                  <input
+                    className="input"
+                    placeholder="https://…"
+                    value={editShow.coverImage}
+                    onChange={e=>setEditShow(p=>p?{...p,coverImage:e.target.value}:p)}
+                  />
+                )}
               </div>
+
+              {/* Opis */}
               <div>
                 <label className="field-label">Opis</label>
                 <textarea className="input" rows={3} placeholder="Krótki opis pokazu…" value={editShow.description} onChange={e=>setEditShow(p=>p?{...p,description:e.target.value}:p)} style={{ resize:"vertical",fontFamily:"inherit" }}/>
               </div>
+
+              {/* Tagi */}
               <div>
                 <label className="field-label">Tagi</label>
                 <div style={{ display:"flex",gap:"var(--space-2)",marginBottom:"var(--space-3)",flexWrap:"wrap" }}>
@@ -478,6 +614,8 @@ export default function AdminShows() {
                   <button onClick={addTag} disabled={!tagInput.trim()} style={{ padding:"var(--space-2) var(--space-4)",borderRadius:"var(--radius-md)",border:"1px solid var(--color-border)",background:"var(--color-surface-offset)",cursor:"pointer",display:"flex",alignItems:"center" }}><Plus size={14}/></button>
                 </div>
               </div>
+
+              {/* Toggles */}
               <div style={{ display:"flex",flexDirection:"column",gap:"var(--space-3)" }}>
                 <div className="toggle-row">
                   <div><p style={{ fontSize:"var(--text-sm)",fontWeight:600 }}>Wyróżniony pokaz</p><p style={{ fontSize:"var(--text-xs)",color:"var(--color-text-faint)" }}>Pojawi się na stronie głównej</p></div>
@@ -493,6 +631,7 @@ export default function AdminShows() {
                 </div>
               </div>
             </div>
+
             <div className="modal-footer">
               <button onClick={()=>setEditShow(null)} style={{ flex:1,padding:"var(--space-3)",borderRadius:"var(--radius-md)",border:"1px solid var(--color-border)",background:"transparent",cursor:"pointer",fontSize:"var(--text-sm)",fontWeight:600 }}>Anuluj</button>
               <button onClick={saveShow} disabled={!canSave||saving} style={{ flex:2,padding:"var(--space-3)",borderRadius:"var(--radius-md)",background:canSave&&!saving?"var(--color-accent)":"var(--color-surface-dynamic)",color:canSave&&!saving?"#fff":"var(--color-text-faint)",border:"none",cursor:canSave&&!saving?"pointer":"not-allowed",fontSize:"var(--text-sm)",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:"var(--space-2)" }}>
@@ -504,8 +643,8 @@ export default function AdminShows() {
         </div>
       )}
 
-      {/* ── Delete modal ──────────────────────────────────────────── */}
-      {deleteModal&&(
+      {/* ── Delete modal ── */}
+      {deleteModal && (
         <div className="modal-bg" onClick={()=>setDeleteModal(null)}>
           <div style={{ background:"var(--color-surface)",border:"1px solid var(--color-border)",borderRadius:"var(--radius-xl)",padding:"var(--space-8)",maxWidth:360,width:"100%",boxShadow:"var(--shadow-xl)" }} onClick={e=>e.stopPropagation()}>
             <div style={{ width:44,height:44,borderRadius:"var(--radius-xl)",background:"rgba(239,68,68,.1)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:"var(--space-4)",color:"#ef4444" }}><Trash2 size={20}/></div>
