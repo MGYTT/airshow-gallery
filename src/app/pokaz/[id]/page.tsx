@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   MapPin, Calendar, Images, ChevronLeft,
-  Star, Tag, ArrowRight, Home, Share2,
+  Star, Tag, ArrowRight, Home, Share2, Hash,
 } from "lucide-react";
 import PhotoGrid from "@/components/PhotoGrid";
 import StoriesBar from "@/components/stories/StoriesBar";
@@ -167,7 +167,6 @@ export default async function ShowPage({
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mgyt.pl";
 
-  // JSON-LD dla tej podstrony
   const jsonLd = {
     "@context":    "https://schema.org",
     "@type":       "Event",
@@ -178,23 +177,19 @@ export default async function ShowPage({
       "name":    show.location,
       "address": show.location,
     },
-    "image":       show.coverImage || `${siteUrl}/og-image.jpg`,
-    "url":         `${siteUrl}/pokaz/${show.id}`,
+    "image":    show.coverImage || `${siteUrl}/og-image.jpg`,
+    "url":      `${siteUrl}/pokaz/${show.id}`,
     "organizer": {
       "@type": "Organization",
       "name":  "MGYT AirShow Gallery",
       "url":   siteUrl,
     },
     "photo": photos.slice(0, 10).map(p => ({
-      "@type":        "ImageObject",
-      "url":          p.src,
-      "description":  p.alt || p.aircraft,
+      "@type":       "ImageObject",
+      "url":         p.src,
+      "description": p.alt || p.aircraft,
     })),
   };
-
-  // Wyróżnione zdjęcia do "miniaturek" w hero
-  const featuredPhotos = photos.filter(p => p.featured).slice(0, 5);
-  const heroPhotos     = featuredPhotos.length >= 3 ? featuredPhotos : photos.slice(0, 5);
 
   return (
     <>
@@ -204,61 +199,111 @@ export default async function ShowPage({
       />
 
       <style>{`
-        /* ── Reset / base ── */
-        .sp-wrap { padding-top: 64px; min-height: 100dvh; }
+        /* ── Base ── */
+        .sp-wrap { padding-top:64px; min-height:100dvh; }
 
-        /* ── Breadcrumb ── */
+        /* ── Animacje ── */
+        @keyframes sp-up { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        .sp-anim-1 { animation:sp-up .5s cubic-bezier(.16,1,.3,1) both; }
+        .sp-anim-2 { animation:sp-up .5s .07s cubic-bezier(.16,1,.3,1) both; }
+        .sp-anim-3 { animation:sp-up .5s .14s cubic-bezier(.16,1,.3,1) both; }
+
+        /* ── Hero ── */
+        .sp-hero { position:relative; height:clamp(340px,52vw,620px); background:#0a0a0a; overflow:hidden; }
+        .sp-hero-overlay { position:absolute; inset:0; background:linear-gradient(160deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.55) 55%,rgba(0,0,0,.88) 100%); z-index:1; }
+        .sp-hero-content { position:absolute; bottom:0; left:0; right:0; z-index:2; padding:clamp(var(--space-6),5vw,var(--space-12)) clamp(var(--space-5),5vw,var(--space-12)); }
+        .sp-hero-inner { max-width:var(--content-wide); margin:0 auto; }
+        .sp-hero-placeholder { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,var(--color-surface-offset) 0%,var(--color-surface-dynamic) 100%); }
+
+        /* ── Hero title ── */
+        .sp-title { font-family:var(--font-display); font-weight:900; font-size:var(--text-2xl); letter-spacing:-0.04em; color:#fff; line-height:1.05; margin-bottom:var(--space-4); text-shadow:0 2px 24px rgba(0,0,0,.4); }
+        @media(max-width:640px) { .sp-title { font-size:var(--text-xl); } }
+
+        /* ── Chipy w hero ── */
+        .sp-chips { display:flex; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-4); }
+        .sp-chip { display:inline-flex; align-items:center; gap:5px; font-size:var(--text-xs); font-weight:600; color:rgba(255,255,255,.9); background:rgba(255,255,255,.1); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); padding:var(--space-2) var(--space-3); border-radius:var(--radius-full); border:1px solid rgba(255,255,255,.18); white-space:nowrap; }
+        .sp-chip--featured { background:rgba(251,191,36,.18); border-color:rgba(251,191,36,.4); color:#fde68a; }
+
+        /* ── Hero akcje ── */
+        .sp-hero-actions { display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5); }
+        .sp-back-btn { display:inline-flex; align-items:center; gap:var(--space-2); color:rgba(255,255,255,.65); font-size:var(--text-xs); font-weight:600; text-decoration:none; padding:var(--space-2) var(--space-3); border-radius:var(--radius-full); background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); transition:background .15s,color .15s; }
+        .sp-back-btn:hover { background:rgba(255,255,255,.15); color:#fff; }
+        .sp-share-btn { display:inline-flex; align-items:center; gap:var(--space-2); color:rgba(255,255,255,.65); font-size:var(--text-xs); font-weight:600; padding:var(--space-2) var(--space-3); border-radius:var(--radius-full); background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); cursor:pointer; transition:background .15s,color .15s; }
+        .sp-share-btn:hover { background:rgba(255,255,255,.15); color:#fff; }
+
+        /* ── Breadcrumb bar ── */
+        .sp-nav-bar { border-bottom:1px solid var(--color-divider); background:var(--color-surface); }
+        .sp-nav-bar-inner { max-width:var(--content-wide); margin:0 auto; padding:var(--space-3) clamp(var(--space-5),5vw,var(--space-12)); }
         .sp-breadcrumb { display:flex; align-items:center; gap:var(--space-2); font-size:var(--text-xs); color:var(--color-text-faint); flex-wrap:wrap; }
         .sp-breadcrumb a { color:var(--color-text-faint); text-decoration:none; transition:color .15s; display:inline-flex; align-items:center; gap:4px; }
         .sp-breadcrumb a:hover { color:var(--color-text); }
         .sp-breadcrumb-sep { opacity:.4; }
         .sp-breadcrumb-current { color:var(--color-text-muted); font-weight:600; }
 
-        /* ── Hero ── */
-        .sp-hero { position:relative; height:clamp(340px,52vw,620px); background:#0a0a0a; overflow:hidden; }
-        .sp-hero-overlay { position:absolute; inset:0; background:linear-gradient(160deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.55) 55%,rgba(0,0,0,.85) 100%); z-index:1; }
-        .sp-hero-content { position:absolute; bottom:0; left:0; right:0; z-index:2; padding:clamp(var(--space-6),5vw,var(--space-12)) clamp(var(--space-5),5vw,var(--space-12)); }
-        .sp-hero-inner { max-width:var(--content-wide); margin:0 auto; }
-
-        /* ── Hero title ── */
-        .sp-title { font-family:var(--font-display); font-weight:900; font-size:var(--text-2xl); letter-spacing:-0.04em; color:#fff; line-height:1.05; margin-bottom:var(--space-4); text-shadow:0 2px 24px rgba(0,0,0,.4); }
-        @media(max-width:640px) { .sp-title { font-size:var(--text-xl); } }
-
-        /* ── Meta chips w hero ── */
-        .sp-chips { display:flex; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-4); }
-        .sp-chip { display:inline-flex; align-items:center; gap:5px; font-size:var(--text-xs); font-weight:600; color:rgba(255,255,255,.9); background:rgba(255,255,255,.1); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); padding:var(--space-2) var(--space-3); border-radius:var(--radius-full); border:1px solid rgba(255,255,255,.18); white-space:nowrap; }
-        .sp-chip--featured { background:rgba(251,191,36,.18); border-color:rgba(251,191,36,.4); color:#fde68a; }
-
-        /* ── Hero akcje ── */
-        .sp-hero-actions { display:flex; align-items:center; gap:var(--space-3); }
-        .sp-back-btn { display:inline-flex; align-items:center; gap:var(--space-2); color:rgba(255,255,255,.65); font-size:var(--text-xs); font-weight:600; text-decoration:none; padding:var(--space-2) var(--space-3); border-radius:var(--radius-full); background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); transition:background .15s,color .15s; }
-        .sp-back-btn:hover { background:rgba(255,255,255,.15); color:#fff; }
-        .sp-share-btn { display:inline-flex; align-items:center; gap:var(--space-2); color:rgba(255,255,255,.65); font-size:var(--text-xs); font-weight:600; padding:var(--space-2) var(--space-3); border-radius:var(--radius-full); background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); cursor:pointer; transition:background .15s,color .15s; }
-        .sp-share-btn:hover { background:rgba(255,255,255,.15); color:#fff; }
-
-        /* ── Breadcrumb bar (pod hero) ── */
-        .sp-nav-bar { border-bottom:1px solid var(--color-divider); background:var(--color-surface); }
-        .sp-nav-bar-inner { max-width:var(--content-wide); margin:0 auto; padding:var(--space-3) clamp(var(--space-5),5vw,var(--space-12)); }
-
-        /* ── Body layout ── */
+        /* ── Body ── */
         .sp-body { max-width:var(--content-wide); margin:0 auto; padding:var(--space-8) clamp(var(--space-5),5vw,var(--space-12)); }
 
-        /* ── Info grid (opis + statsy obok siebie na desktopie) ── */
-        .sp-info-grid { display:grid; grid-template-columns:1fr auto; gap:var(--space-10); align-items:start; }
-        @media(max-width:768px) { .sp-info-grid { grid-template-columns:1fr; gap:var(--space-6); } }
-
-        /* ── Stats box ── */
-        .sp-stats-box { display:flex; flex-direction:column; gap:var(--space-4); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-xl); padding:var(--space-5) var(--space-6); min-width:180px; flex-shrink:0; }
-        .sp-stat { display:flex; flex-direction:column; gap:2px; }
-        .sp-stat-label { font-size:var(--text-xs); color:var(--color-text-faint); font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
-        .sp-stat-value { font-family:var(--font-display); font-weight:900; font-size:var(--text-xl); letter-spacing:-0.04em; line-height:1; font-variant-numeric:tabular-nums; color:var(--color-text); }
-        .sp-stat-divider { height:1px; background:var(--color-divider); }
-
         /* ── Opis ── */
-        .sp-desc { font-size:var(--text-base); color:var(--color-text-muted); max-width:72ch; line-height:1.8; margin-bottom:var(--space-5); }
+        .sp-desc { font-size:var(--text-base); color:var(--color-text-muted); max-width:72ch; line-height:1.8; margin-bottom:var(--space-6); }
+
+        /* ══════════════════════════════════════════
+           NOWE STATYSTYKI — poziomy pasek kart
+        ══════════════════════════════════════════ */
+        .sp-meta-strip {
+          display:grid;
+          grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));
+          gap:var(--space-3);
+          margin-bottom:var(--space-6);
+        }
+        .sp-meta-card {
+          display:flex;
+          align-items:center;
+          gap:var(--space-3);
+          padding:var(--space-3) var(--space-4);
+          background:var(--color-surface);
+          border:1px solid var(--color-border);
+          border-radius:var(--radius-lg);
+        }
+        .sp-meta-icon {
+          width:32px;
+          height:32px;
+          border-radius:var(--radius-md);
+          background:var(--color-surface-offset);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          flex-shrink:0;
+          color:var(--color-accent);
+        }
+        .sp-meta-text {
+          display:flex;
+          flex-direction:column;
+          gap:1px;
+          min-width:0;
+        }
+        .sp-meta-label {
+          font-size:10px;
+          font-weight:700;
+          text-transform:uppercase;
+          letter-spacing:.08em;
+          color:var(--color-text-faint);
+          white-space:nowrap;
+        }
+        .sp-meta-value {
+          font-size:var(--text-sm);
+          font-weight:700;
+          color:var(--color-text);
+          white-space:nowrap;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          font-variant-numeric:tabular-nums;
+        }
+        @media(max-width:480px) {
+          .sp-meta-strip { grid-template-columns:1fr 1fr; }
+        }
 
         /* ── Tags ── */
-        .sp-tags { display:flex; flex-wrap:wrap; gap:var(--space-2); align-items:center; }
+        .sp-tags { display:flex; flex-wrap:wrap; gap:var(--space-2); align-items:center; margin-bottom:var(--space-2); }
         .sp-tag { font-size:var(--text-xs); padding:3px 12px; border-radius:var(--radius-full); background:var(--color-surface-offset); border:1px solid var(--color-border); color:var(--color-text-muted); text-decoration:none; transition:background .15s,color .15s,border-color .15s; white-space:nowrap; font-weight:500; }
         .sp-tag:hover { background:var(--color-surface-dynamic); color:var(--color-text); border-color:color-mix(in srgb, var(--color-accent) 40%, transparent); }
 
@@ -279,21 +324,7 @@ export default async function ShowPage({
         .sp-other-card-body { padding:var(--space-4) var(--space-5); }
         .sp-other-card-name { font-size:var(--text-sm); font-weight:700; margin-bottom:var(--space-1); line-height:1.3; }
         .sp-other-card-meta { font-size:var(--text-xs); color:var(--color-text-faint); display:flex; align-items:center; gap:var(--space-2); }
-
-        /* Foto-counter na miniaturce */
         .sp-photo-pill { position:absolute; bottom:var(--space-2); right:var(--space-2); background:rgba(0,0,0,.65); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,.12); border-radius:var(--radius-full); padding:2px 8px; font-size:10px; font-weight:700; color:rgba(255,255,255,.9); display:flex; align-items:center; gap:4px; }
-
-        /* ── Separator ── */
-        .sp-divider { height:1px; background:var(--color-divider); margin:var(--space-8) 0; }
-
-        /* ── Animacje wejścia ── */
-        @keyframes sp-up { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        .sp-anim-1 { animation:sp-up .5s cubic-bezier(.16,1,.3,1) both; }
-        .sp-anim-2 { animation:sp-up .5s .07s cubic-bezier(.16,1,.3,1) both; }
-        .sp-anim-3 { animation:sp-up .5s .14s cubic-bezier(.16,1,.3,1) both; }
-
-        /* ── Placeholder bez covera ── */
-        .sp-hero-placeholder { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, var(--color-surface-offset) 0%, var(--color-surface-dynamic) 100%); }
       `}</style>
 
       <div className="sp-wrap">
@@ -319,17 +350,13 @@ export default async function ShowPage({
 
           <div className="sp-hero-content">
             <div className="sp-hero-inner">
-
-              {/* Akcje — wstecz + share */}
-              <div className="sp-hero-actions sp-anim-1" style={{ marginBottom: "var(--space-5)" }}>
+              <div className="sp-hero-actions sp-anim-1">
                 <Link href="/gallery" className="sp-back-btn">
                   <ChevronLeft size={13}/> Galeria
                 </Link>
                 <button
                   className="sp-share-btn"
                   aria-label="Udostępnij"
-                  onClick={undefined}
-                  /* share obsługuje ShareClient.tsx – patrz uwaga pod kodem */
                   data-share-title={`${show.name} ${show.year}`}
                   data-share-url={`${siteUrl}/pokaz/${show.id}`}
                 >
@@ -337,10 +364,8 @@ export default async function ShowPage({
                 </button>
               </div>
 
-              {/* Tytuł */}
               <h1 className="sp-title sp-anim-2">{show.name}</h1>
 
-              {/* Chipy */}
               <div className="sp-chips sp-anim-3">
                 <span className="sp-chip"><MapPin size={12}/>{show.location}</span>
                 <span className="sp-chip"><Calendar size={12}/>{show.date || show.year}</span>
@@ -351,12 +376,11 @@ export default async function ShowPage({
                   </span>
                 )}
               </div>
-
             </div>
           </div>
         </div>
 
-        {/* ── BREADCRUMB BAR ── */}
+        {/* ── BREADCRUMB ── */}
         <div className="sp-nav-bar">
           <div className="sp-nav-bar-inner">
             <nav className="sp-breadcrumb" aria-label="Ścieżka nawigacji">
@@ -370,71 +394,76 @@ export default async function ShowPage({
         </div>
 
         {/* ── RELACJE ── */}
-        <div style={{ maxWidth: "var(--content-wide)", margin: "0 auto", padding: "0 clamp(var(--space-5),5vw,var(--space-12))" }}>
+        <div style={{ maxWidth:"var(--content-wide)", margin:"0 auto", padding:"0 clamp(var(--space-5),5vw,var(--space-12))" }}>
           <StoriesBar showId={show.id} showTitle={show.name}/>
         </div>
 
         {/* ── BODY ── */}
         <div className="sp-body">
 
-          {/* Info grid: opis + statsy */}
-          <div className="sp-info-grid">
+          {/* Opis */}
+          {show.description ? (
+            <p className="sp-desc">{show.description}</p>
+          ) : (
+            <p className="sp-desc" style={{ fontStyle:"italic", opacity:.6 }}>
+              Brak opisu dla tego pokazu.
+            </p>
+          )}
 
-            {/* Lewa: opis + tagi */}
-            <div>
-              {show.description ? (
-                <p className="sp-desc">{show.description}</p>
-              ) : (
-                <p className="sp-desc" style={{ fontStyle: "italic", opacity: .6 }}>
-                  Brak opisu dla tego pokazu.
-                </p>
-              )}
-
-              {show.tags.length > 0 && (
-                <div className="sp-tags">
-                  <Tag size={13} style={{ color: "var(--color-text-faint)", flexShrink: 0 }}/>
-                  {show.tags.map(t => (
-                    <Link
-                      key={t}
-                      href={`/gallery?tag=${encodeURIComponent(t)}`}
-                      className="sp-tag"
-                    >
-                      {t}
-                    </Link>
-                  ))}
-                </div>
-              )}
+          {/* ══ STATYSTYKI — poziomy pasek ══ */}
+          <div className="sp-meta-strip">
+            <div className="sp-meta-card">
+              <div className="sp-meta-icon"><Images size={15}/></div>
+              <div className="sp-meta-text">
+                <span className="sp-meta-label">Zdjęcia</span>
+                <span className="sp-meta-value">{photos.length}</span>
+              </div>
             </div>
 
-            {/* Prawa: stats box */}
-            <div className="sp-stats-box">
-              <div className="sp-stat">
-                <span className="sp-stat-label">Zdjęcia</span>
-                <span className="sp-stat-value">{photos.length}</span>
+            <div className="sp-meta-card">
+              <div className="sp-meta-icon"><Calendar size={15}/></div>
+              <div className="sp-meta-text">
+                <span className="sp-meta-label">Rok</span>
+                <span className="sp-meta-value">{show.year}</span>
               </div>
-              <div className="sp-stat-divider"/>
-              <div className="sp-stat">
-                <span className="sp-stat-label">Rok</span>
-                <span className="sp-stat-value">{show.year}</span>
-              </div>
-              <div className="sp-stat-divider"/>
-              <div className="sp-stat">
-                <span className="sp-stat-label">Lokalizacja</span>
-                <span className="sp-stat-value" style={{ fontSize: "var(--text-lg)" }}>
-                  {show.location.split(",").pop()?.trim() ?? show.location}
+            </div>
+
+            <div className="sp-meta-card">
+              <div className="sp-meta-icon"><MapPin size={15}/></div>
+              <div className="sp-meta-text">
+                <span className="sp-meta-label">Lokalizacja</span>
+                <span className="sp-meta-value" title={show.location}>
+                  {show.location}
                 </span>
               </div>
-              {show.tags.length > 0 && (
-                <>
-                  <div className="sp-stat-divider"/>
-                  <div className="sp-stat">
-                    <span className="sp-stat-label">Tagi</span>
-                    <span className="sp-stat-value">{show.tags.length}</span>
-                  </div>
-                </>
-              )}
             </div>
+
+            {show.tags.length > 0 && (
+              <div className="sp-meta-card">
+                <div className="sp-meta-icon"><Hash size={15}/></div>
+                <div className="sp-meta-text">
+                  <span className="sp-meta-label">Tagi</span>
+                  <span className="sp-meta-value">{show.tags.length}</span>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Tagi */}
+          {show.tags.length > 0 && (
+            <div className="sp-tags">
+              <Tag size={13} style={{ color:"var(--color-text-faint)", flexShrink:0 }}/>
+              {show.tags.map(t => (
+                <Link
+                  key={t}
+                  href={`/gallery?tag=${encodeURIComponent(t)}`}
+                  className="sp-tag"
+                >
+                  {t}
+                </Link>
+              ))}
+            </div>
+          )}
 
           {/* ── ZDJĘCIA ── */}
           <div className="sp-section-head">
@@ -465,12 +494,12 @@ export default async function ShowPage({
                           src={other.coverImage}
                           alt={other.name}
                           fill
-                          style={{ objectFit: "cover" }}
+                          style={{ objectFit:"cover" }}
                           sizes="(max-width:768px) 100vw, 33vw"
                         />
                       ) : (
-                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <Images size={28} style={{ opacity: .15 }}/>
+                        <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          <Images size={28} style={{ opacity:.15 }}/>
                         </div>
                       )}
                       <div className="sp-photo-pill">
