@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import {
   Calendar, MapPin, CheckCircle2, Clock, Globe,
-  ChevronRight, ArrowLeft, Plane, AlertCircle, Star,
+  ChevronRight, ArrowLeft, Plane, Star,
 } from "lucide-react";
 
 // ── Typy ─────────────────────────────────────────────────────
@@ -12,66 +12,93 @@ import {
 type EventStatus = "done" | "soon" | "upcoming";
 type EventTab    = "polska" | "zagranica";
 
-interface AirEvent {
-  name:     string;
-  location: string;
-  date:     string;
-  dateSort: string;
-  status:   EventStatus;
-  tab:      EventTab;
-  note?:    string;
+interface AirEventRaw {
+  name:        string;
+  location:    string;
+  date:        string;
+  /** Data rozpoczęcia w formacie YYYY-MM-DD */
+  dateStart:   string;
+  /** Data zakończenia w formacie YYYY-MM-DD — dla wydarzeń jednodniowych taka sama jak dateStart */
+  dateEnd:     string;
+  tab:         EventTab;
+  note?:       string;
 }
 
-// ── Dane ─────────────────────────────────────────────────────
+interface AirEvent extends AirEventRaw {
+  status: EventStatus;
+}
 
-const EVENTS: AirEvent[] = [
-  // ── Polska — Odbyte ──
-  { name: "Pokazy Lotnicze JEDLIŃSKY 2026",        location: "Piastów",               date: "25 kwietnia 2026",              dateSort: "2026-04-25", status: "done",     tab: "polska" },
-  { name: "Pokazy Lotnicze Air SKY",               location: "Lotnisko Piastów k. Radomia", date: "25 kwietnia 2026",         dateSort: "2026-04-25", status: "done",     tab: "polska" },
-  { name: "Aerosploty",                            location: "Lotnisko Aleksandrowice, Bielsko-Biała", date: "2 maja 2026",  dateSort: "2026-05-02", status: "done",     tab: "polska" },
-  { name: "Świdnik Air Festival",                  location: "Świdnik",               date: "13–14 czerwca 2026",            dateSort: "2026-06-13", status: "done",     tab: "polska" },
-  { name: "ANTIDOTUM Airshow Leszno",              location: "Leszno",                date: "19–20 czerwca 2026",            dateSort: "2026-06-19", status: "done",     tab: "polska" },
+// ── Dane źródłowe (bez ręcznego statusu — liczony automatycznie) ──
 
-  // ── Polska — Nadchodzące ──
-  { name: "Odlotowe Suwałki Air Show",             location: "Suwałki",               date: "27 czerwca 2026",               dateSort: "2026-06-27", status: "soon",     tab: "polska" },
-  { name: "Fly Fest",                              location: "Piotrków Trybunalski",  date: "4–5 lipca 2026",                dateSort: "2026-07-04", status: "upcoming", tab: "polska" },
-  { name: "Nowotarski Piknik Lotniczy",            location: "Lotnisko Nowy Targ",    date: "4–5 lipca 2026",                dateSort: "2026-07-04", status: "upcoming", tab: "polska" },
-  { name: "RANWERS Dolnośląskie Pokazy Lotnicze",  location: "Świebodzice",           date: "25–26 lipca 2026",              dateSort: "2026-07-25", status: "upcoming", tab: "polska" },
-  { name: "AirShow Rudniki",                       location: "Rudniki",               date: "1 sierpnia 2026",               dateSort: "2026-08-01", status: "upcoming", tab: "polska" },
-  { name: "Mazury AirShow",                        location: "Kętrzyn",               date: "1–2 sierpnia 2026",             dateSort: "2026-08-01", status: "upcoming", tab: "polska" },
-  { name: "Płocki Piknik Lotniczy",                location: "Płock",                 date: "7–8 sierpnia 2026",             dateSort: "2026-08-07", status: "upcoming", tab: "polska", note: "Nie potwierdzony" },
-  { name: "Aeropiknik Baloniada Ogrodzieniec",     location: "Ogrodzieniec",          date: "8–9 sierpnia 2026",             dateSort: "2026-08-08", status: "upcoming", tab: "polska" },
-  { name: "Piknik Lotniczy w Łososinie Dolnej",    location: "Łososina Dolna",        date: "15–16 sierpnia 2026",           dateSort: "2026-08-15", status: "upcoming", tab: "polska" },
-  { name: "Giżycko Airshow",                       location: "Giżycko",               date: "22 sierpnia 2026",              dateSort: "2026-08-22", status: "upcoming", tab: "polska" },
-  { name: "Leszczyńska Noc Balonowa",              location: "Leszno",                date: "28–30 sierpnia 2026",           dateSort: "2026-08-28", status: "upcoming", tab: "polska" },
-  { name: "Festiwal Wiatru Unisław",               location: "Unisław",               date: "29 sierpnia 2026",              dateSort: "2026-08-29", status: "upcoming", tab: "polska" },
-  { name: "Festiwal Wiatru Toruń",                 location: "Toruń",                 date: "30 sierpnia 2026",              dateSort: "2026-08-30", status: "upcoming", tab: "polska" },
-  { name: "Skrzydła nad Kazimierzem",              location: "Kazimierz",             date: "11–13 września 2026",           dateSort: "2026-09-11", status: "upcoming", tab: "polska" },
-  { name: "VII Zlot Zabytkowych Szybowców",        location: "Góra Litwinka",         date: "12–13 września 2026",           dateSort: "2026-09-12", status: "upcoming", tab: "polska" },
+const EVENTS_RAW: AirEventRaw[] = [
+  // ── Polska ──
+  { name: "Pokazy Lotnicze JEDLIŃSKY 2026",        location: "Piastów",               date: "25 kwietnia 2026",     dateStart: "2026-04-25", dateEnd: "2026-04-25", tab: "polska" },
+  { name: "Pokazy Lotnicze Air SKY",               location: "Lotnisko Piastów k. Radomia", date: "25 kwietnia 2026", dateStart: "2026-04-25", dateEnd: "2026-04-25", tab: "polska" },
+  { name: "Aerosploty",                            location: "Lotnisko Aleksandrowice, Bielsko-Biała", date: "2 maja 2026", dateStart: "2026-05-02", dateEnd: "2026-05-02", tab: "polska" },
+  { name: "Świdnik Air Festival",                  location: "Świdnik",               date: "13–14 czerwca 2026",   dateStart: "2026-06-13", dateEnd: "2026-06-14", tab: "polska" },
+  { name: "ANTIDOTUM Airshow Leszno",              location: "Leszno",                date: "19–20 czerwca 2026",   dateStart: "2026-06-19", dateEnd: "2026-06-20", tab: "polska" },
+  { name: "Odlotowe Suwałki Air Show",             location: "Suwałki",               date: "27 czerwca 2026",      dateStart: "2026-06-27", dateEnd: "2026-06-27", tab: "polska" },
+  { name: "Fly Fest",                              location: "Piotrków Trybunalski",  date: "4–5 lipca 2026",       dateStart: "2026-07-04", dateEnd: "2026-07-05", tab: "polska" },
+  { name: "Nowotarski Piknik Lotniczy",            location: "Lotnisko Nowy Targ",    date: "4–5 lipca 2026",       dateStart: "2026-07-04", dateEnd: "2026-07-05", tab: "polska" },
+  { name: "RANWERS Dolnośląskie Pokazy Lotnicze",  location: "Świebodzice",           date: "25–26 lipca 2026",     dateStart: "2026-07-25", dateEnd: "2026-07-26", tab: "polska" },
+  { name: "AirShow Rudniki",                       location: "Rudniki",               date: "1 sierpnia 2026",      dateStart: "2026-08-01", dateEnd: "2026-08-01", tab: "polska" },
+  { name: "Mazury AirShow",                        location: "Kętrzyn",               date: "1–2 sierpnia 2026",    dateStart: "2026-08-01", dateEnd: "2026-08-02", tab: "polska" },
+  { name: "Płocki Piknik Lotniczy",                location: "Płock",                 date: "7–8 sierpnia 2026",    dateStart: "2026-08-07", dateEnd: "2026-08-08", tab: "polska", note: "Nie potwierdzony" },
+  { name: "Aeropiknik Baloniada Ogrodzieniec",     location: "Ogrodzieniec",          date: "8–9 sierpnia 2026",    dateStart: "2026-08-08", dateEnd: "2026-08-09", tab: "polska" },
+  { name: "Piknik Lotniczy w Łososinie Dolnej",    location: "Łososina Dolna",        date: "15–16 sierpnia 2026",  dateStart: "2026-08-15", dateEnd: "2026-08-16", tab: "polska" },
+  { name: "Giżycko Airshow",                       location: "Giżycko",               date: "22 sierpnia 2026",     dateStart: "2026-08-22", dateEnd: "2026-08-22", tab: "polska" },
+  { name: "Leszczyńska Noc Balonowa",              location: "Leszno",                date: "28–30 sierpnia 2026",  dateStart: "2026-08-28", dateEnd: "2026-08-30", tab: "polska" },
+  { name: "Festiwal Wiatru Unisław",                location: "Unisław",               date: "29 sierpnia 2026",     dateStart: "2026-08-29", dateEnd: "2026-08-29", tab: "polska" },
+  { name: "Festiwal Wiatru Toruń",                  location: "Toruń",                 date: "30 sierpnia 2026",     dateStart: "2026-08-30", dateEnd: "2026-08-30", tab: "polska" },
+  { name: "Skrzydła nad Kazimierzem",              location: "Kazimierz",             date: "11–13 września 2026",  dateStart: "2026-09-11", dateEnd: "2026-09-13", tab: "polska" },
+  { name: "VII Zlot Zabytkowych Szybowców",        location: "Góra Litwinka",         date: "12–13 września 2026",  dateStart: "2026-09-12", dateEnd: "2026-09-13", tab: "polska" },
 
   // ── Zagranica ──
-  { name: "International Sanicole Airshow",        location: "Hechtel-Eksel, Belgia", date: "12–13 września 2026",           dateSort: "2026-09-12", status: "upcoming", tab: "zagranica", note: "Warte uwagi" },
-  { name: "NATO Days 2026",                        location: "Ostrawa, Czechy",       date: "19–20 września 2026",           dateSort: "2026-09-19", status: "upcoming", tab: "zagranica", note: "Blisko Polski" },
+  { name: "International Sanicole Airshow",        location: "Hechtel-Eksel, Belgia", date: "12–13 września 2026",  dateStart: "2026-09-12", dateEnd: "2026-09-13", tab: "zagranica", note: "Warte uwagi" },
+  { name: "NATO Days 2026",                        location: "Ostrawa, Czechy",       date: "19–20 września 2026",  dateStart: "2026-09-19", dateEnd: "2026-09-20", tab: "zagranica", note: "Blisko Polski" },
 ];
+
+// ── Ile dni przed startem wydarzenie liczy się jako "wkrótce" ──
+const SOON_THRESHOLD_DAYS = 14;
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function getNextEvent(tab: EventTab): AirEvent | undefined {
-  return EVENTS
-    .filter(e => e.tab === tab && e.status !== "done")
-    .sort((a, b) => a.dateSort.localeCompare(b.dateSort))[0];
+function todayMidnight(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
-function getDaysUntil(dateSort: string): number | null {
-  const target = new Date(dateSort);
-  const now    = new Date();
-  now.setHours(0, 0, 0, 0);
-  const diff = Math.ceil((target.getTime() - now.getTime()) / 86400000);
-  return diff;
+function daysBetween(a: Date, b: Date): number {
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
 }
 
-function getMonthAbbr(dateSort: string): { day: string; month: string } {
-  const d = new Date(dateSort);
+/** Liczy status wydarzenia w oparciu o aktualną datę */
+function computeStatus(ev: AirEventRaw, now: Date): EventStatus {
+  const end = new Date(ev.dateEnd);
+  end.setHours(23, 59, 59, 999);
+
+  if (end.getTime() < now.getTime()) return "done";
+
+  const start   = new Date(ev.dateStart);
+  const daysOut = daysBetween(now, start);
+
+  if (daysOut <= SOON_THRESHOLD_DAYS) return "soon";
+  return "upcoming";
+}
+
+function withStatus(events: AirEventRaw[], now: Date): AirEvent[] {
+  return events.map(e => ({ ...e, status: computeStatus(e, now) }));
+}
+
+function getDaysUntil(dateStart: string, now: Date): number {
+  const target = new Date(dateStart);
+  target.setHours(0, 0, 0, 0);
+  return daysBetween(now, target);
+}
+
+function getMonthAbbr(dateStart: string): { day: string; month: string } {
+  const d = new Date(dateStart);
   return {
     day:   d.getDate().toString(),
     month: d.toLocaleString("pl-PL", { month: "short" }).replace(".", "").toUpperCase(),
@@ -80,10 +107,10 @@ function getMonthAbbr(dateSort: string): { day: string; month: string } {
 
 // ── Karta eventu ─────────────────────────────────────────────
 
-function EventCard({ event, isNext, index }: { event: AirEvent; isNext?: boolean; index?: number }) {
+function EventCard({ event, isNext, index, now }: { event: AirEvent; isNext?: boolean; index?: number; now: Date }) {
   const [hovered, setHovered] = useState(false);
-  const days   = getDaysUntil(event.dateSort);
-  const mabbr  = getMonthAbbr(event.dateSort);
+  const days   = getDaysUntil(event.dateStart, now);
+  const mabbr  = getMonthAbbr(event.dateStart);
   const isDone = event.status === "done";
 
   return (
@@ -115,8 +142,9 @@ function EventCard({ event, isNext, index }: { event: AirEvent; isNext?: boolean
           </h3>
           <div className="kl-card-badges">
             {isNext && <span className="kl-badge kl-badge--next">Następny ✦</span>}
-            {event.note === "Blisko Polski"   && <span className="kl-badge kl-badge--geo">📍 {event.note}</span>}
-            {event.note === "Warte uwagi"     && <span className="kl-badge kl-badge--star"><Star size={9} fill="currentColor"/> {event.note}</span>}
+            {isDone && <span className="kl-badge kl-badge--done"><CheckCircle2 size={9}/> Odbyty</span>}
+            {event.note === "Blisko Polski"    && <span className="kl-badge kl-badge--geo">📍 {event.note}</span>}
+            {event.note === "Warte uwagi"      && <span className="kl-badge kl-badge--star"><Star size={9} fill="currentColor"/> {event.note}</span>}
             {event.note === "Nie potwierdzony" && <span className="kl-badge kl-badge--warn">⚠ {event.note}</span>}
           </div>
         </div>
@@ -134,10 +162,15 @@ function EventCard({ event, isNext, index }: { event: AirEvent; isNext?: boolean
 
       {/* Prawa strona — status + odliczanie */}
       <div className="kl-card-right">
-        {!isDone && days !== null && days >= 0 && (
+        {!isDone && days >= 0 && (
           <div className={`kl-countdown ${isNext ? "kl-countdown--next" : ""}`}>
             <span className="kl-countdown-num">{days === 0 ? "dziś" : days === 1 ? "jutro" : `${days}`}</span>
             {days > 1 && <span className="kl-countdown-label">dni</span>}
+          </div>
+        )}
+        {!isDone && days < 0 && (
+          <div className="kl-countdown">
+            <span className="kl-countdown-num" style={{ fontSize: "var(--text-xs)" }}>trwa</span>
           </div>
         )}
         <div className={`kl-status-dot ${isDone ? "kl-status-dot--done" : event.status === "soon" ? "kl-status-dot--soon" : "kl-status-dot--upcoming"}`}/>
@@ -148,10 +181,10 @@ function EventCard({ event, isNext, index }: { event: AirEvent; isNext?: boolean
 
 // ── Pasek postępu sezonu ──────────────────────────────────────
 
-function SeasonProgress() {
-  const total = EVENTS.filter(e => e.tab === "polska").length;
-  const done  = EVENTS.filter(e => e.tab === "polska" && e.status === "done").length;
-  const pct   = Math.round((done / total) * 100);
+function SeasonProgress({ events }: { events: AirEvent[] }) {
+  const total = events.length;
+  const done  = events.filter(e => e.status === "done").length;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
     <div className="kl-progress-wrap">
@@ -173,16 +206,34 @@ function SeasonProgress() {
 // ── PAGE ─────────────────────────────────────────────────────
 
 export default function KalendarzClient() {
-  const [tab, setTab] = useState<EventTab>("polska");
+  const [tab, setTab]         = useState<EventTab>("polska");
   const [mounted, setMounted] = useState(false);
-  const listRef = useRef<HTMLDivElement>(null);
+  const listRef                = useRef<HTMLDivElement>(null);
+
+  // "now" jest liczone raz przy montowaniu — wystarczy dla kalendarza dziennego,
+  // a odświeżenie strony automatycznie przeliczy statusy na nowo.
+  const now = useMemo(() => todayMidnight(), []);
 
   useEffect(() => { setMounted(true); }, []);
 
-  const events        = EVENTS.filter(e => e.tab === tab).sort((a, b) => a.dateSort.localeCompare(b.dateSort));
-  const nextEvt       = getNextEvent(tab);
-  const doneEvents    = events.filter(e => e.status === "done");
-  const upcomingEvts  = events.filter(e => e.status !== "done").filter(e => !nextEvt || e.name !== nextEvt.name);
+  // Wszystkie wydarzenia z automatycznie policzonym statusem
+  const allEvents = useMemo(() => withStatus(EVENTS_RAW, now), [now]);
+
+  const events = useMemo(
+    () => allEvents.filter(e => e.tab === tab).sort((a, b) => a.dateStart.localeCompare(b.dateStart)),
+    [allEvents, tab]
+  );
+
+  // Następne wydarzenie = pierwsze, które jeszcze się nie zakończyło
+  const nextEvt = useMemo(
+    () => events.filter(e => e.status !== "done")[0],
+    [events]
+  );
+
+  const doneEvents   = events.filter(e => e.status === "done");
+  const upcomingEvts = events.filter(e => e.status !== "done" && (!nextEvt || e.name !== nextEvt.name || e.dateStart !== nextEvt.dateStart));
+
+  const polandEvents = useMemo(() => allEvents.filter(e => e.tab === "polska"), [allEvents]);
 
   const handleTabChange = (t: EventTab) => {
     setTab(t);
@@ -196,7 +247,6 @@ export default function KalendarzClient() {
         @keyframes kl-up   { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         @keyframes kl-in   { from{opacity:0;transform:translateY(8px)}  to{opacity:1;transform:translateY(0)} }
         @keyframes kl-pulse{ 0%,100%{opacity:1} 50%{opacity:.5} }
-        @keyframes kl-fly  { 0%{transform:translateX(-6px) rotate(-5deg);opacity:0} 100%{transform:translateX(0) rotate(0);opacity:1} }
         @keyframes kl-prog { from{width:0} to{width:var(--target-w)} }
 
         /* ── Layout ── */
@@ -279,6 +329,7 @@ export default function KalendarzClient() {
         .kl-card-badges { display:flex; gap:4px; flex-wrap:wrap; }
         .kl-badge       { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:99px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; flex-shrink:0; white-space:nowrap; }
         .kl-badge--next { background:var(--color-accent); color:#fff; }
+        .kl-badge--done { background:var(--color-surface-offset); color:var(--color-text-faint); }
         .kl-badge--geo  { background:color-mix(in srgb, var(--color-primary,#01696f) 12%, transparent); color:var(--color-primary,#01696f); border:1px solid color-mix(in srgb, var(--color-primary,#01696f) 25%, transparent); }
         .kl-badge--star { background:var(--color-gold-subtle); color:var(--color-gold); border:1px solid color-mix(in srgb, var(--color-gold) 25%, transparent); }
         .kl-badge--warn { background:color-mix(in srgb, var(--color-gold) 10%, transparent); color:var(--color-gold); border:1px solid color-mix(in srgb, var(--color-gold) 25%, transparent); opacity:.85; }
@@ -301,6 +352,9 @@ export default function KalendarzClient() {
         .kl-cta-btn { display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-3) var(--space-6); border-radius:var(--radius-md); background:var(--color-accent); color:#fff; font-weight:700; font-size:var(--text-sm); text-decoration:none; white-space:nowrap; flex-shrink:0; transition:background .18s, transform .15s, box-shadow .18s; box-shadow:0 2px 12px color-mix(in srgb, var(--color-accent) 35%, transparent); }
         .kl-cta-btn:hover { background:var(--color-accent-hover); transform:translateY(-1px); box-shadow:0 6px 20px color-mix(in srgb, var(--color-accent) 45%, transparent); }
         .kl-cta-btn:active { transform:scale(.97); }
+
+        /* ── Empty state ── */
+        .kl-empty { text-align:center; padding:var(--space-12) var(--space-6); color:var(--color-text-faint); }
 
         /* ── Responsive ── */
         @media(max-width:600px) {
@@ -332,15 +386,15 @@ export default function KalendarzClient() {
             </h1>
 
             <p className="kl-sub">
-              Wszystkie pokazy lotnicze w Polsce oraz wybrane imprezy zagraniczne warte uwagi — w jednym miejscu.
+              Wszystkie pokazy lotnicze w Polsce oraz wybrane imprezy zagraniczne warte uwagi — status aktualizuje się automatycznie w oparciu o dzisiejszą datę.
             </p>
 
             {/* Statystyki */}
             <div className="kl-stats">
               {[
-                { value: EVENTS.filter(e => e.tab === "polska").length,  label: "Pokazów w Polsce",   color: "var(--color-text)" },
-                { value: EVENTS.filter(e => e.status === "done").length, label: "Już odbyło się",     color: "var(--color-text-muted)" },
-                { value: EVENTS.filter(e => e.status !== "done").length, label: "Jeszcze przed nami", color: "var(--color-accent)" },
+                { value: polandEvents.length,                                    label: "Pokazów w Polsce",   color: "var(--color-text)" },
+                { value: allEvents.filter(e => e.status === "done").length,       label: "Już odbyło się",     color: "var(--color-text-muted)" },
+                { value: allEvents.filter(e => e.status !== "done").length,       label: "Jeszcze przed nami", color: "var(--color-accent)" },
               ].map(({ value, label, color }) => (
                 <div className="kl-stat" key={label}>
                   <span className="kl-stat-v" style={{ color }}>{value}</span>
@@ -360,7 +414,7 @@ export default function KalendarzClient() {
                   {t === "polska" ? <Plane size={13}/> : <Globe size={13}/>}
                   {t === "polska" ? "Polska" : "Zagranica"}
                   <span className="kl-tab-count" style={{ color: tab === t ? "var(--color-accent)" : "var(--color-text-faint)" }}>
-                    {EVENTS.filter(e => e.tab === t).length}
+                    {allEvents.filter(e => e.tab === t).length}
                   </span>
                 </button>
               ))}
@@ -371,7 +425,7 @@ export default function KalendarzClient() {
         {/* ── Treść ── */}
         <div className="container--narrow" style={{ paddingTop:"var(--space-8)" }} ref={listRef}>
 
-          {tab === "polska" && mounted && <SeasonProgress />}
+          {tab === "polska" && mounted && <SeasonProgress events={polandEvents}/>}
 
           {nextEvt && (
             <div style={{ marginBottom:"var(--space-6)" }}>
@@ -379,24 +433,11 @@ export default function KalendarzClient() {
                 <span className="kl-next-pulse"/>
                 Następne wydarzenie
               </p>
-              <EventCard event={nextEvt} isNext index={0}/>
+              <EventCard event={nextEvt} isNext index={0} now={now}/>
             </div>
           )}
 
           <div className="kl-list">
-
-            {doneEvents.length > 0 && (
-              <>
-                <div className="kl-sep">
-                  <div className="kl-sep-line"/>
-                  <span className="kl-sep-label">
-                    <CheckCircle2 size={10}/> Odbyte — {doneEvents.length}
-                  </span>
-                  <div className="kl-sep-line"/>
-                </div>
-                {doneEvents.map((e, i) => <EventCard key={e.name + e.dateSort} event={e} index={i}/>)}
-              </>
-            )}
 
             {upcomingEvts.length > 0 && (
               <>
@@ -407,8 +448,27 @@ export default function KalendarzClient() {
                   </span>
                   <div className="kl-sep-line"/>
                 </div>
-                {upcomingEvts.map((e, i) => <EventCard key={e.name + e.dateSort} event={e} index={i + 1}/>)}
+                {upcomingEvts.map((e, i) => <EventCard key={e.name + e.dateStart} event={e} index={i + 1} now={now}/>)}
               </>
+            )}
+
+            {doneEvents.length > 0 && (
+              <>
+                <div className="kl-sep">
+                  <div className="kl-sep-line"/>
+                  <span className="kl-sep-label">
+                    <CheckCircle2 size={10}/> Odbyte — {doneEvents.length}
+                  </span>
+                  <div className="kl-sep-line"/>
+                </div>
+                {doneEvents.map((e, i) => <EventCard key={e.name + e.dateStart} event={e} index={i} now={now}/>)}
+              </>
+            )}
+
+            {events.length === 0 && (
+              <div className="kl-empty">
+                <p>Brak wydarzeń w tej kategorii.</p>
+              </div>
             )}
 
           </div>
