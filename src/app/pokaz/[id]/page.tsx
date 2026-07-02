@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   MapPin, Calendar, Images, ChevronLeft,
-  Star, Tag, ArrowRight, Home, Hash,
+  Star, Tag, ArrowRight, Home, Hash, Plane,
 } from "lucide-react";
 import PhotoGrid from "@/components/PhotoGrid";
 import StoriesBar from "@/components/stories/StoriesBar";
@@ -29,6 +29,7 @@ export const revalidate = 60;
 // ── Supabase ──────────────────────────────────────────────────
 const BASE    = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const API_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://airshow-gallery.vercel.app";
 
 function getSbHeaders(): Record<string, string> | null {
   if (!BASE || !API_KEY) {
@@ -51,6 +52,18 @@ function mapShow(s: Record<string, unknown>): AirShow {
     tags:        (s.tags        as string[]) ?? [],
     featured:    Boolean(s.featured),
   };
+}
+
+// ── Formatowanie daty (pl-PL) ─────────────────────────────────
+function formatShowDate(dateStr: string, year: number): string {
+  if (!dateStr) return String(year);
+  const parsed = new Date(dateStr);
+  if (Number.isNaN(parsed.getTime())) return dateStr;
+  return new Intl.DateTimeFormat("pl-PL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(parsed);
 }
 
 const getShow = cache(async (id: string): Promise<AirShow | null> => {
@@ -142,8 +155,6 @@ export async function generateMetadata({
   const { id } = await params;
   const show    = await getShow(id);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mgyt.pl";
-
   if (!show) {
     return {
       title: "Pokaz nie znaleziony — MGYT AirShow Gallery",
@@ -152,8 +163,8 @@ export async function generateMetadata({
     };
   }
 
-  const pageUrl = `${siteUrl}/pokaz/${show.id}`;
-  const ogImage = show.coverImage || `${siteUrl}/og-image.jpg`;
+  const pageUrl = `${SITE_URL}/pokaz/${show.id}`;
+  const ogImage = show.coverImage || `${SITE_URL}/og-image.jpg`;
   const desc    = show.description
     ? show.description.slice(0, 155)
     : `${show.photoCount} zdjęć z ${show.name} — ${show.location}, ${show.year}`;
@@ -200,8 +211,14 @@ export default async function ShowPage({
 
   if (!show) notFound();
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mgyt.pl";
-  const pageUrl = `${siteUrl}/pokaz/${show.id}`;
+  const pageUrl = `${SITE_URL}/pokaz/${show.id}`;
+  const formattedDate = formatShowDate(show.date, show.year);
+
+  const uniqueAircraftCount = new Set(
+    photos.map(p => p.aircraft.trim().toLowerCase()).filter(Boolean)
+  ).size;
+
+  const featuredPhotos = photos.filter(p => p.featured);
 
   const eventJsonLd = {
     "@context":    "https://schema.org",
@@ -214,14 +231,14 @@ export default async function ShowPage({
       "name":    show.location,
       "address": show.location,
     },
-    "image":    show.coverImage || `${siteUrl}/og-image.jpg`,
+    "image":    show.coverImage || `${SITE_URL}/og-image.jpg`,
     "url":      pageUrl,
     "eventStatus": "https://schema.org/EventScheduled",
     "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
     "organizer": {
       "@type": "Organization",
       "name":  "MGYT AirShow Gallery",
-      "url":   siteUrl,
+      "url":   SITE_URL,
     },
     "photo": photos.slice(0, 10).map(p => ({
       "@type":       "ImageObject",
@@ -234,8 +251,8 @@ export default async function ShowPage({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Strona główna", "item": siteUrl },
-      { "@type": "ListItem", "position": 2, "name": "Galeria", "item": `${siteUrl}/gallery` },
+      { "@type": "ListItem", "position": 1, "name": "Strona główna", "item": SITE_URL },
+      { "@type": "ListItem", "position": 2, "name": "Galeria", "item": `${SITE_URL}/gallery` },
       { "@type": "ListItem", "position": 3, "name": show.name, "item": pageUrl },
     ],
   };
@@ -257,16 +274,19 @@ export default async function ShowPage({
 
         /* ── Animacje ── */
         @keyframes sp-up { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes sp-zoom { from{transform:scale(1.08)} to{transform:scale(1)} }
         .sp-anim-1 { animation:sp-up .5s cubic-bezier(.16,1,.3,1) both; }
         .sp-anim-2 { animation:sp-up .5s .07s cubic-bezier(.16,1,.3,1) both; }
         .sp-anim-3 { animation:sp-up .5s .14s cubic-bezier(.16,1,.3,1) both; }
 
         @media (prefers-reduced-motion: reduce) {
           .sp-anim-1, .sp-anim-2, .sp-anim-3 { animation:none; opacity:1; }
+          .sp-hero-img { animation:none !important; }
         }
 
         /* ── Hero ── */
         .sp-hero { position:relative; height:clamp(340px,52vw,620px); background:#0a0a0a; overflow:hidden; }
+        .sp-hero-img { animation:sp-zoom 8s cubic-bezier(.16,1,.3,1) both; }
         .sp-hero-overlay { position:absolute; inset:0; background:linear-gradient(160deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.55) 55%,rgba(0,0,0,.88) 100%); z-index:1; }
         .sp-hero-content { position:absolute; bottom:0; left:0; right:0; z-index:2; padding:clamp(var(--space-6),5vw,var(--space-12)) clamp(var(--space-5),5vw,var(--space-12)); }
         .sp-hero-inner { max-width:var(--content-wide); margin:0 auto; }
@@ -285,9 +305,7 @@ export default async function ShowPage({
         .sp-hero-actions { display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5); }
         .sp-back-btn { display:inline-flex; align-items:center; gap:var(--space-2); color:rgba(255,255,255,.65); font-size:var(--text-xs); font-weight:600; text-decoration:none; padding:var(--space-2) var(--space-3); border-radius:var(--radius-full); background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); transition:background .15s,color .15s; }
         .sp-back-btn:hover { background:rgba(255,255,255,.15); color:#fff; }
-        .sp-share-btn { display:inline-flex; align-items:center; gap:var(--space-2); color:rgba(255,255,255,.65); font-size:var(--text-xs); font-weight:600; padding:var(--space-2) var(--space-3); border-radius:var(--radius-full); background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); cursor:pointer; transition:background .15s,color .15s; }
-        .sp-share-btn:hover { background:rgba(255,255,255,.15); color:#fff; }
-        .sp-share-btn:focus-visible, .sp-back-btn:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+        .sp-back-btn:focus-visible { outline:2px solid #fff; outline-offset:2px; }
 
         /* ── Breadcrumb bar ── */
         .sp-nav-bar { border-bottom:1px solid var(--color-divider); background:var(--color-surface); }
@@ -317,13 +335,21 @@ export default async function ShowPage({
         .sp-tags { display:flex; flex-wrap:wrap; gap:var(--space-2); align-items:center; margin-bottom:var(--space-2); }
         .sp-tag { font-size:var(--text-xs); padding:3px 12px; border-radius:var(--radius-full); background:var(--color-surface-offset); border:1px solid var(--color-border); color:var(--color-text-muted); text-decoration:none; transition:background .15s,color .15s,border-color .15s; white-space:nowrap; font-weight:500; }
         .sp-tag:hover { background:var(--color-surface-dynamic); color:var(--color-text); border-color:color-mix(in srgb, var(--color-accent) 40%, transparent); }
+        .sp-tag:focus-visible { outline:2px solid var(--color-accent); outline-offset:2px; }
 
         /* ── Section header ── */
         .sp-section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-5); padding-top:var(--space-8); border-top:1px solid var(--color-divider); flex-wrap:wrap; gap:var(--space-3); }
-        .sp-section-title { font-family:var(--font-display); font-weight:900; font-size:var(--text-lg); letter-spacing:-0.02em; }
+        .sp-section-title { font-family:var(--font-display); font-weight:900; font-size:var(--text-lg); letter-spacing:-0.02em; display:flex; align-items:center; }
         .sp-section-count { font-weight:400; color:var(--color-text-faint); font-size:var(--text-sm); margin-left:var(--space-2); font-family:inherit; }
         .sp-section-link { display:inline-flex; align-items:center; gap:4px; font-size:var(--text-xs); font-weight:700; color:var(--color-accent); text-decoration:none; }
         .sp-section-link:hover { text-decoration:underline; }
+
+        /* ── Wyróżnione zdjęcia ── */
+        .sp-featured-strip { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(240px, 1fr); gap:var(--space-4); overflow-x:auto; padding-bottom:var(--space-2); scroll-snap-type:x proximity; }
+        .sp-featured-strip::-webkit-scrollbar { height:6px; }
+        .sp-featured-strip::-webkit-scrollbar-thumb { background:var(--color-border); border-radius:var(--radius-full); }
+        .sp-featured-item { position:relative; aspect-ratio:4/3; border-radius:var(--radius-lg); overflow:hidden; background:var(--color-surface-offset); scroll-snap-align:start; border:1px solid var(--color-border); }
+        .sp-featured-badge { position:absolute; top:var(--space-2); left:var(--space-2); display:inline-flex; align-items:center; gap:4px; background:rgba(0,0,0,.65); backdrop-filter:blur(4px); color:#fde68a; font-size:10px; font-weight:700; padding:3px 9px; border-radius:var(--radius-full); border:1px solid rgba(251,191,36,.35); }
 
         /* ── Empty state zdjęć ── */
         .sp-photos-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--space-3); padding:var(--space-16) var(--space-6); color:var(--color-text-faint); text-align:center; background:var(--color-surface); border:1px dashed var(--color-border); border-radius:var(--radius-xl); }
@@ -352,6 +378,7 @@ export default async function ShowPage({
               alt={`${show.name} — zdjęcie główne z pokazu lotniczego w ${show.location}, ${show.year}`}
               fill
               quality={90}
+              className="sp-hero-img"
               style={{ objectFit: "cover" }}
               priority
               sizes="100vw"
@@ -376,7 +403,7 @@ export default async function ShowPage({
 
               <div className="sp-chips sp-anim-3">
                 <span className="sp-chip"><MapPin size={12}/>{show.location}</span>
-                <span className="sp-chip"><Calendar size={12}/>{show.date || show.year}</span>
+                <span className="sp-chip"><Calendar size={12}/>{formattedDate}</span>
                 <span className="sp-chip"><Images size={12}/>{photos.length} zdjęć</span>
                 {show.featured && (
                   <span className="sp-chip sp-chip--featured">
@@ -431,8 +458,8 @@ export default async function ShowPage({
             <div className="sp-meta-card">
               <div className="sp-meta-icon"><Calendar size={15}/></div>
               <div className="sp-meta-text">
-                <span className="sp-meta-label">Rok</span>
-                <span className="sp-meta-value">{show.year}</span>
+                <span className="sp-meta-label">Data</span>
+                <span className="sp-meta-value" title={formattedDate}>{formattedDate}</span>
               </div>
             </div>
 
@@ -445,6 +472,16 @@ export default async function ShowPage({
                 </span>
               </div>
             </div>
+
+            {uniqueAircraftCount > 0 && (
+              <div className="sp-meta-card">
+                <div className="sp-meta-icon"><Plane size={15}/></div>
+                <div className="sp-meta-text">
+                  <span className="sp-meta-label">Samoloty</span>
+                  <span className="sp-meta-value">{uniqueAircraftCount}</span>
+                </div>
+              </div>
+            )}
 
             {show.tags.length > 0 && (
               <div className="sp-meta-card">
@@ -473,10 +510,40 @@ export default async function ShowPage({
             </div>
           )}
 
+          {/* ── WYRÓŻNIONE ZDJĘCIA ── */}
+          {featuredPhotos.length > 0 && (
+            <>
+              <div className="sp-section-head">
+                <h2 className="sp-section-title">
+                  <Star size={18} fill="currentColor" style={{ marginRight: 8, color: "#eab308" }}/>
+                  Wyróżnione
+                  <span className="sp-section-count">({featuredPhotos.length})</span>
+                </h2>
+              </div>
+              <div className="sp-featured-strip">
+                {featuredPhotos.map(p => (
+                  <div key={p.id} className="sp-featured-item">
+                    <Image
+                      src={p.src}
+                      alt={p.alt || p.aircraft || show.name}
+                      fill
+                      style={{ objectFit:"cover" }}
+                      sizes="(max-width:768px) 60vw, 300px"
+                      loading="lazy"
+                    />
+                    <span className="sp-featured-badge">
+                      <Star size={10} fill="currentColor"/> Wyróżnione
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           {/* ── ZDJĘCIA ── */}
           <div className="sp-section-head">
             <h2 className="sp-section-title">
-              Zdjęcia
+              Wszystkie zdjęcia
               <span className="sp-section-count">({photos.length})</span>
             </h2>
           </div>
