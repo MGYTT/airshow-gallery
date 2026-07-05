@@ -6,6 +6,35 @@ function isAdmin(req: NextRequest) {
   return req.cookies.get("admin_session")?.value === "true";
 }
 
+function slugify(name: string) {
+  return name.toLowerCase()
+    .replace(/ą/g,"a").replace(/ć/g,"c").replace(/ę/g,"e")
+    .replace(/ł/g,"l").replace(/ń/g,"n").replace(/ó/g,"o")
+    .replace(/ś/g,"s").replace(/ź|ż/g,"z")
+    .replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"").slice(0,40);
+}
+
+// Znajduje pierwszy wolny slug: "radom-2026", "radom-2026-2", "radom-2026-3"...
+async function findAvailableId(baseSlug: string): Promise<string> {
+  const base = baseSlug || `show-${Date.now()}`;
+  const { data: existing, error } = await supabaseAdmin
+    .from("air_shows")
+    .select("id")
+    .like("id", `${base}%`);
+
+  if (error) {
+    // Jeśli sprawdzenie się nie uda — wracamy do bezpiecznego unikalnego ID
+    return `${base}-${Date.now()}`;
+  }
+
+  const taken = new Set((existing ?? []).map(r => r.id as string));
+  if (!taken.has(base)) return base;
+
+  let n = 2;
+  while (taken.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const all = searchParams.get("all") === "true";
@@ -59,7 +88,12 @@ export async function POST(req: NextRequest) {
 
   const dateValue = typeof body.date === "string" && body.date.trim() !== "" ? body.date.trim() : null;
 
-  const insertPayload: Record<string, unknown> = {
+  // Bazowy slug: ignorujemy ewentualne "id" z frontendu i budujemy go od zera
+  // z nazwy + roku, żeby dwa pokazy o tej samej nazwie w różnych latach
+  // nie kolidowały (np. "radom-air-show-2025" vs "radom-air-show-2026").
+  const baseSlug = slugify(`${name}-${year}`) || slugify(name) || `show-${Date.now()}`;
+
+  const insertPayload = {
     name,
     location,
     date:        dateValue,
@@ -71,20 +105,37 @@ export async function POST(req: NextRequest) {
     published:   body.published !== false,
   };
 
-  if (typeof body.id === "string" && body.id.trim() !== "") {
-    insertPayload.id = body.id.trim();
+  // Do 3 prób: znajdź wolny slug → wstaw. Jeśli mimo to zderzymy się z race
+  // condition (23505 = unique_violation), próbujemy ponownie z nowym sufiksem.
+  const MAX_ATTEMPTS = 3;
+  let lastError: { message: string; code?: string } | null = null;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const id = await findAvailableId(baseSlug);
+
+    const { data, error } = await supabaseAdmin
+      .from("air_shows")
+      .insert({ id, ...insertPayload })
+      .select()
+      .single();
+
+    if (!error) {
+      return NextResponse.json(mapShow(data), { status: 201 });
+    }
+
+    lastError = error;
+
+    // 23505 = duplicate key — inny request zdążył wziąć ten slug w tej samej milisekundzie.
+    // Spróbuj jeszcze raz z nowym sprawdzeniem dostępności.
+    if (error.code !== "23505") {
+      console.error("POST /api/shows — błąd Supabase:", error);
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 500 });
+    }
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("air_shows")
-    .insert(insertPayload)
-    .select()
-    .single();
-
-  if (error) {
-    console.error("POST /api/shows — błąd Supabase:", error);
-    return NextResponse.json({ error: error.message, code: error.code }, { status: 500 });
-  }
-
-  return NextResponse.json(mapShow(data), { status: 201 });
+  console.error("POST /api/shows — wyczerpano próby unikalnego ID:", lastError);
+  return NextResponse.json(
+    { error: "Nie udało się wygenerować unikalnego identyfikatora pokazu. Spróbuj ponownie." },
+    { status: 409 }
+  );
 }

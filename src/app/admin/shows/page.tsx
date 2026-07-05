@@ -32,14 +32,6 @@ function jsonHeaders(): Record<string, string> {
   return { "Content-Type": "application/json" };
 }
 
-function slugify(name: string) {
-  return name.toLowerCase()
-    .replace(/ą/g,"a").replace(/ć/g,"c").replace(/ę/g,"e")
-    .replace(/ł/g,"l").replace(/ń/g,"n").replace(/ó/g,"o")
-    .replace(/ś/g,"s").replace(/ź|ż/g,"z")
-    .replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"").slice(0,40);
-}
-
 const EMPTY: Omit<Show,"id"|"photoCount"> = {
   name:"", date:"", year: new Date().getFullYear(),
   location:"", country:"Polska", description:"",
@@ -237,13 +229,19 @@ export default function AdminShows() {
       };
 
       if (isNew) {
-        const id = slugify(editShow.name) || `show-${Date.now()}`;
+        // Backend sam generuje unikalny "id" na podstawie nazwy i roku —
+        // patrz src/app/api/shows/route.ts (findAvailableId). Klient nie
+        // wysyła już "id", żeby uniknąć kolizji "duplicate key" przy
+        // dwóch pokazach o tej samej nazwie.
         const res = await fetch("/api/shows", {
           method: "POST",
           headers: jsonHeaders(),
-          body: JSON.stringify({ id, ...payload }),
+          body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error((await res.json()).error);
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? `HTTP ${res.status}`);
+        }
         const created = await res.json();
         setShows(prev => [mapApiShow(created), ...prev]);
       } else {
@@ -252,7 +250,10 @@ export default function AdminShows() {
           headers: jsonHeaders(),
           body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error((await res.json()).error);
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? `HTTP ${res.status}`);
+        }
         const updated = await res.json();
         setShows(prev => prev.map(s => s.id === editShow.id ? mapApiShow(updated) : s));
       }
