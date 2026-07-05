@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { mapPhoto } from "@/lib/supabase/types";
 
 function isAdmin(req: NextRequest) {
-  return req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
+  return req.cookies.get("admin_session")?.value === "true";
 }
 
 export async function GET(req: NextRequest) {
@@ -21,7 +21,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const body = await req.json();
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Nieprawidłowy JSON w treści żądania" }, { status: 400 });
+  }
 
   const { data, error } = await supabaseAdmin
     .from("photos")
@@ -37,6 +43,9 @@ export async function POST(req: NextRequest) {
     })
     .select().single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("POST /api/photos — błąd Supabase:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json(mapPhoto(data), { status: 201 });
 }

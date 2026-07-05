@@ -3,17 +3,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function isAdmin(req: NextRequest) {
-  return req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
+  return req.cookies.get("admin_session")?.value === "true";
 }
 
-// ✅ NOWE: PATCH do zmiany featured, alt, aircraft itd.
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
-  const body = await req.json();
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Nieprawidłowy JSON w treści żądania" }, { status: 400 });
+  }
 
   const update: Record<string, unknown> = {};
   if (body.featured  !== undefined) update.featured  = body.featured;
@@ -28,7 +33,10 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("PATCH /api/photos/[id] — błąd Supabase:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
@@ -55,6 +63,9 @@ export async function DELETE(
   }
 
   const { error } = await supabaseAdmin.from("photos").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("DELETE /api/photos/[id] — błąd Supabase:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ success: true });
 }

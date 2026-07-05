@@ -24,12 +24,12 @@ interface Show {
 }
 
 const COUNTRIES = ["Polska","Niemcy","Francja","Wielka Brytania","USA","Czechy","Słowacja","Inne"];
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? "";
 
-function adminHeaders(json = true) {
-  const h: Record<string, string> = { "x-admin-secret": ADMIN_SECRET };
-  if (json) h["Content-Type"] = "application/json";
-  return h;
+// Uwierzytelnienie odbywa się przez httpOnly cookie "admin_session"
+// (ustawiane przez /api/auth/login), które przeglądarka wysyła automatycznie
+// z każdym żądaniem same-origin. Nie potrzebujemy już nagłówka x-admin-secret.
+function jsonHeaders(): Record<string, string> {
+  return { "Content-Type": "application/json" };
 }
 
 function slugify(name: string) {
@@ -64,7 +64,7 @@ function mapApiShow(s: Record<string, unknown>): Show {
   return {
     id:          s.id          as string,
     name:        s.name        as string,
-    date:        s.date        as string,
+    date:        (s.date as string) ?? "",
     year:        s.year        as number,
     location:    loc,
     country,
@@ -103,7 +103,11 @@ export default function AdminShows() {
   const loadShows = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res = await fetch("/api/shows?all=true", { headers: adminHeaders(false) });
+      const res = await fetch("/api/shows?all=true");
+      if (res.status === 401) {
+        window.location.href = "/admin/login?redirect=/admin/shows";
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setShows(data.map(mapApiShow));
@@ -144,7 +148,7 @@ export default function AdminShows() {
       const res = await fetch("/api/upload/cover", {
         method: "POST",
         body: fd,
-        // Uwierzytelnienie przez cookie (admin_session) — tak jak obecny /api/upload
+        // Uwierzytelnienie przez cookie (admin_session)
       });
 
       if (!res.ok) {
@@ -179,7 +183,7 @@ export default function AdminShows() {
       }
       const res = await fetch(`/api/shows/${id}`, {
         method: "PATCH",
-        headers: adminHeaders(),
+        headers: jsonHeaders(),
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error((await res.json()).error);
@@ -193,9 +197,7 @@ export default function AdminShows() {
     setShows(prev => prev.filter(s => s.id !== id));
     setDeleteModal(null);
     try {
-      const res = await fetch(`/api/shows/${id}`, {
-        method: "DELETE", headers: adminHeaders(false),
-      });
+      const res = await fetch(`/api/shows/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json()).error);
     } catch (e) {
       setError(`Błąd usuwania: ${e}`);
@@ -208,7 +210,7 @@ export default function AdminShows() {
     setSelected(new Set());
     try {
       await Promise.all([...ids].map(id =>
-        fetch(`/api/shows/${id}`, { method: "DELETE", headers: adminHeaders(false) })
+        fetch(`/api/shows/${id}`, { method: "DELETE" })
       ));
     } catch (e) {
       setError(`Błąd usuwania: ${e}`);
@@ -223,9 +225,9 @@ export default function AdminShows() {
     try {
       const locationFull = `${editShow.location}, ${editShow.country}`;
       const payload = {
-        name:        editShow.name,
+        name:        editShow.name.trim(),
         location:    locationFull,
-        date:        editShow.date,
+        date:        editShow.date.trim() || null,
         year:        editShow.year,
         description: editShow.description,
         coverImage:  editShow.coverImage,
@@ -238,7 +240,7 @@ export default function AdminShows() {
         const id = slugify(editShow.name) || `show-${Date.now()}`;
         const res = await fetch("/api/shows", {
           method: "POST",
-          headers: adminHeaders(),
+          headers: jsonHeaders(),
           body: JSON.stringify({ id, ...payload }),
         });
         if (!res.ok) throw new Error((await res.json()).error);
@@ -247,7 +249,7 @@ export default function AdminShows() {
       } else {
         const res = await fetch(`/api/shows/${editShow.id}`, {
           method: "PATCH",
-          headers: adminHeaders(),
+          headers: jsonHeaders(),
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error((await res.json()).error);
@@ -514,7 +516,6 @@ export default function AdminShows() {
               <div>
                 <label className="field-label">Miniatura pokazu</label>
 
-                {/* Przełącznik Upload / URL */}
                 <div className="cover-tabs">
                   <button className={`cover-tab ${coverTab==="upload"?"on":""}`} onClick={()=>setCoverTab("upload")}>
                     <Upload size={12}/> Prześlij plik
@@ -524,7 +525,6 @@ export default function AdminShows() {
                   </button>
                 </div>
 
-                {/* Podgląd jeśli jest już cover */}
                 {editShow.coverImage && (
                   <div className="cover-preview" style={{ marginBottom:"var(--space-3)" }}>
                     <img
@@ -542,7 +542,6 @@ export default function AdminShows() {
                   </div>
                 )}
 
-                {/* ── TAB: UPLOAD ── */}
                 {coverTab === "upload" && (
                   <>
                     {coverUploading ? (
@@ -571,7 +570,6 @@ export default function AdminShows() {
                         </p>
                       </div>
                     )}
-                    {/* Ukryty input */}
                     <input
                       ref={coverInputRef}
                       type="file"
@@ -582,7 +580,6 @@ export default function AdminShows() {
                   </>
                 )}
 
-                {/* ── TAB: URL ── */}
                 {coverTab === "url" && (
                   <input
                     className="input"
