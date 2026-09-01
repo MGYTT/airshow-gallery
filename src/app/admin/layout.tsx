@@ -6,29 +6,36 @@ import Link from "next/link";
 import {
   LayoutDashboard, Images, Upload, Clapperboard,
   Settings, LogOut, Menu, X, ChevronRight,
-  Plane, Bell, Sun, Moon, Play,
+  Plane, Bell, Sun, Moon, Play, CalendarDays,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/admin",               label: "Dashboard",     icon: LayoutDashboard, exact: true },
-  { href: "/admin/photos",        label: "Zdjęcia",       icon: Images },
-  { href: "/admin/photos/upload", label: "Dodaj zdjęcia", icon: Upload },
-  { href: "/admin/shows",         label: "Pokazy",        icon: Clapperboard },
-  { href: "/admin/stories",       label: "Relacje",       icon: Play },
-  { href: "/admin/settings",      label: "Ustawienia",    icon: Settings },
+  { href: "/admin",               label: "Dashboard",      icon: LayoutDashboard, exact: true },
+  { href: "/admin/photos",        label: "Zdjęcia",        icon: Images },
+  { href: "/admin/photos/upload", label: "Dodaj zdjęcia",  icon: Upload },
+  { href: "/admin/shows",         label: "Pokazy",         icon: Clapperboard },
+  { href: "/admin/calendar",      label: "Kalendarz",      icon: CalendarDays },
+  { href: "/admin/stories",       label: "Relacje",        icon: Play },
+  { href: "/admin/settings",      label: "Ustawienia",     icon: Settings },
 ];
 
 const crumbMap: Record<string, string> = {
-  admin: "Admin", photos: "Zdjęcia", upload: "Upload",
-  shows: "Pokazy", settings: "Ustawienia", stories: "Relacje",
+  admin: "Admin",
+  photos: "Zdjęcia",
+  upload: "Upload",
+  shows: "Pokazy",
+  calendar: "Kalendarz",
+  new: "Nowe wydarzenie",
+  settings: "Ustawienia",
+  stories: "Relacje",
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname                      = usePathname();
-  const router                        = useRouter();
+  const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [dark, setDark]               = useState(false);
-  const [mounted, setMounted]         = useState(false);
+  const [dark, setDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -36,6 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       document.documentElement.getAttribute("data-theme") === "dark" ||
       (!document.documentElement.getAttribute("data-theme") &&
         window.matchMedia("(prefers-color-scheme: dark)").matches);
+
     setDark(isDark);
   }, []);
 
@@ -44,9 +52,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
   }, [dark, mounted]);
 
-  useEffect(() => { setSidebarOpen(false); }, [pathname]);
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
-  if (pathname === "/admin/login") return <>{children}</>;
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -58,7 +70,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return exact ? pathname === href : pathname.startsWith(href);
   }
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <>
@@ -73,7 +87,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         .nav-item.active{background:var(--color-accent-subtle);color:var(--color-accent);font-weight:600}
         .nav-item.active::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:var(--radius-full);background:var(--color-accent)}
 
-        /* Relacje — teal zamiast accent (czerwony) */
         .nav-item.stories-link:hover{background:oklch(from var(--color-primary) l c h / .08);color:var(--color-primary)}
         .nav-item.stories-link.active{background:oklch(from var(--color-primary) l c h / .1);color:var(--color-primary)}
         .nav-item.stories-link.active::before{background:var(--color-primary)}
@@ -88,7 +101,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         .icon-btn{width:34px;height:34px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;background:transparent;color:var(--color-text-muted);transition:background 150ms,color 150ms}
         .icon-btn:hover{background:var(--color-surface-offset);color:var(--color-text)}
 
-        /* Separator między sekcjami w nav */
         .nav-sep{height:1px;background:var(--color-divider);margin:var(--space-2) var(--space-4)}
       `}</style>
 
@@ -98,7 +110,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       />
 
       <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
-        {/* Logo */}
         <div style={{ padding:"var(--space-5) var(--space-5) var(--space-4)", borderBottom:"1px solid var(--color-border)", display:"flex", alignItems:"center", gap:"var(--space-3)" }}>
           <div style={{ width:32, height:32, borderRadius:"var(--radius-md)", background:"var(--color-accent-subtle)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--color-accent)", flexShrink:0 }}>
             <Plane size={16}/>
@@ -109,15 +120,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
 
-        {/* Nawigacja */}
         <nav style={{ flex:1, padding:"var(--space-3)", overflowY:"auto" }}>
-
-          {/* Sekcja: Treść */}
           <p style={{ fontSize:"var(--text-xs)", fontWeight:700, textTransform:"uppercase", letterSpacing:".1em", color:"var(--color-text-faint)", padding:"var(--space-2) var(--space-4)", marginBottom:"var(--space-1)" }}>
             Treść
           </p>
 
-          {NAV.filter(n => !["stories", "settings"].includes(n.href.split("/")[2] ?? "")).map(({ href, label, icon: Icon, exact }) => (
+          {NAV.filter((item) => !["stories", "settings"].includes(item.href.split("/")[2] ?? "")).map(({ href, label, icon: Icon, exact }) => (
             <Link
               key={href}
               href={href}
@@ -128,10 +136,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
           ))}
 
-          {/* Separator */}
           <div className="nav-sep"/>
 
-          {/* Sekcja: Relacje */}
           <p style={{ fontSize:"var(--text-xs)", fontWeight:700, textTransform:"uppercase", letterSpacing:".1em", color:"var(--color-text-faint)", padding:"var(--space-2) var(--space-4)", marginBottom:"var(--space-1)" }}>
             Relacje
           </p>
@@ -142,16 +148,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <Play size={17}/>
             Zarządzaj relacjami
-            {/* Badge "nowe" */}
             <span style={{ marginLeft:"auto", fontSize:9, fontWeight:800, letterSpacing:".06em", textTransform:"uppercase", background:"var(--color-primary)", color:"#fff", padding:"2px 6px", borderRadius:99 }}>
               NEW
             </span>
           </Link>
 
-          {/* Separator */}
           <div className="nav-sep"/>
 
-          {/* Sekcja: System */}
           <p style={{ fontSize:"var(--text-xs)", fontWeight:700, textTransform:"uppercase", letterSpacing:".1em", color:"var(--color-text-faint)", padding:"var(--space-2) var(--space-4)", marginBottom:"var(--space-1)" }}>
             System
           </p>
@@ -165,7 +168,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </nav>
 
-        {/* Footer sidebara */}
         <div style={{ padding:"var(--space-3)", borderTop:"1px solid var(--color-border)" }}>
           <button className="nav-item" onClick={handleLogout}>
             <LogOut size={17}/> Wyloguj
@@ -178,24 +180,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <div className="admin-main">
         <header className="admin-header">
-          <button id="admin-hamburger" className="icon-btn" aria-label="Menu" onClick={() => setSidebarOpen(v => !v)}>
+          <button id="admin-hamburger" className="icon-btn" aria-label="Menu" onClick={() => setSidebarOpen((value) => !value)}>
             {sidebarOpen ? <X size={18}/> : <Menu size={18}/>}
           </button>
 
           <nav style={{ flex:1, display:"flex", alignItems:"center", gap:"var(--space-2)" }}>
-            {pathname.split("/").filter(Boolean).map((seg, i, arr) => (
-              <span key={i} style={{ display:"flex", alignItems:"center", gap:"var(--space-2)" }}>
-                {i > 0 && <ChevronRight size={12} style={{ color:"var(--color-text-faint)" }}/>}
-                <span style={{ fontSize:"var(--text-xs)", fontWeight: i === arr.length - 1 ? 600 : 400, color: i === arr.length - 1 ? "var(--color-text)" : "var(--color-text-faint)" }}>
-                  {crumbMap[seg] ?? seg}
+            {pathname.split("/").filter(Boolean).map((segment, index, array) => (
+              <span key={index} style={{ display:"flex", alignItems:"center", gap:"var(--space-2)" }}>
+                {index > 0 && <ChevronRight size={12} style={{ color:"var(--color-text-faint)" }}/>}
+                <span style={{ fontSize:"var(--text-xs)", fontWeight:index === array.length - 1 ? 600 : 400, color:index === array.length - 1 ? "var(--color-text)" : "var(--color-text-faint)" }}>
+                  {crumbMap[segment] ?? segment}
                 </span>
               </span>
             ))}
           </nav>
 
           <div style={{ display:"flex", alignItems:"center", gap:"var(--space-1)" }}>
-            <button className="icon-btn" aria-label="Powiadomienia"><Bell size={16}/></button>
-            <button className="icon-btn" aria-label="Motyw" onClick={() => setDark(d => !d)}>
+            <button className="icon-btn" aria-label="Powiadomienia">
+              <Bell size={16}/>
+            </button>
+            <button className="icon-btn" aria-label="Motyw" onClick={() => setDark((value) => !value)}>
               {dark ? <Sun size={16}/> : <Moon size={16}/>}
             </button>
             <div style={{ width:32, height:32, borderRadius:"var(--radius-full)", background:"var(--color-accent-subtle)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"var(--text-xs)", fontWeight:700, color:"var(--color-accent)", flexShrink:0, userSelect:"none", marginLeft:"var(--space-1)" }}>
