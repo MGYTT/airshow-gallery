@@ -5,180 +5,162 @@ const SITE_URL = (
   "https://airshow-gallery.vercel.app"
 ).replace(/\/$/, "");
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
 interface SitemapEvent {
   slug: string;
-  updated_at: string;
+  updated_at: string | null;
   published_at: string | null;
 }
 
 interface SitemapShow {
   id: string;
-  updated_at: string;
+  updated_at: string | null;
+  created_at: string | null;
 }
 
-function getSupabaseHeaders(): Record<string, string> | null {
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!baseUrl || !anonKey) {
-    console.error(
-      "Sitemap: brak NEXT_PUBLIC_SUPABASE_URL lub NEXT_PUBLIC_SUPABASE_ANON_KEY."
-    );
-
+function getHeaders(): HeadersInit | null {
+  if (!SUPABASE_ANON_KEY) {
+    console.error("Sitemap: brak NEXT_PUBLIC_SUPABASE_ANON_KEY.");
     return null;
   }
 
   return {
-    apikey: anonKey,
-    Authorization: `Bearer ${anonKey}`,
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
   };
 }
 
-function safeDate(value: string | null | undefined, fallback: Date) {
+function asValidDate(value: string | null | undefined) {
   if (!value) {
-    return fallback;
+    return undefined;
   }
 
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? fallback : date;
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-async function getPublishedEvents(): Promise<SitemapEvent[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const headers = getSupabaseHeaders();
+async function fetchJson<T>(path: string): Promise<T[]> {
+  const headers = getHeaders();
 
-  if (!baseUrl || !headers) {
+  if (!SUPABASE_URL || !headers) {
+    console.error(
+      "Sitemap: brak NEXT_PUBLIC_SUPABASE_URL lub NEXT_PUBLIC_SUPABASE_ANON_KEY."
+    );
     return [];
   }
 
   try {
-    const response = await fetch(
-      `${baseUrl}/rest/v1/airshow_events?select=slug,updated_at,published_at&published=eq.true&order=updated_at.desc`,
-      {
-        headers,
-        next: { revalidate: 300 },
-      }
-    );
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      headers,
+      next: { revalidate: 300 },
+    });
 
     if (!response.ok) {
-      console.error(
-        `Sitemap: nie udało się pobrać wydarzeń. HTTP ${response.status}.`
-      );
-
+      console.error(`Sitemap: Supabase zwrócił HTTP ${response.status}.`);
       return [];
     }
 
-    const data = (await response.json()) as SitemapEvent[];
-
-    return data.filter(
-      (event) =>
-        typeof event.slug === "string" &&
-        event.slug.length > 0 &&
-        /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(event.slug)
-    );
+    return (await response.json()) as T[];
   } catch (error) {
-    console.error("Sitemap: błąd pobierania wydarzeń:", error);
+    console.error("Sitemap: błąd pobierania danych:", error);
     return [];
   }
 }
 
-async function getPublishedShows(): Promise<SitemapShow[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const headers = getSupabaseHeaders();
+async function getPublishedEvents() {
+  const events = await fetchJson<SitemapEvent>(
+    "airshow_events?select=slug,updated_at,published_at&published=eq.true&order=updated_at.desc"
+  );
 
-  if (!baseUrl || !headers) {
-    return [];
-  }
+  const seen = new Set<string>();
 
-  try {
-    const response = await fetch(
-      `${baseUrl}/rest/v1/air_shows?select=id,updated_at&published=eq.true&order=updated_at.desc`,
-      {
-        headers,
-        next: { revalidate: 300 },
-      }
-    );
+  return events.filter((event) => {
+    const slug = event.slug?.trim();
 
-    if (!response.ok) {
-      console.error(
-        `Sitemap: nie udało się pobrać galerii pokazów. HTTP ${response.status}.`
-      );
-
-      return [];
+    if (
+      !slug ||
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
+      seen.has(slug)
+    ) {
+      return false;
     }
 
-    const data = (await response.json()) as SitemapShow[];
+    seen.add(slug);
+    return true;
+  });
+}
 
-    return data.filter(
-      (show) =>
-        typeof show.id === "string" &&
-        show.id.length > 0
-    );
-  } catch (error) {
-    console.error("Sitemap: błąd pobierania galerii pokazów:", error);
-    return [];
-  }
+async function getPublishedShows() {
+  return fetchJson<SitemapShow>(
+    "air_shows?select=id,updated_at,created_at&published=eq.true&order=updated_at.desc"
+  );
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const generatedAt = new Date();
-
   const [events, shows] = await Promise.all([
     getPublishedEvents(),
     getPublishedShows(),
   ]);
 
-  const staticRoutes: MetadataRoute.Sitemap = [
+  const routes: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
-      lastModified: generatedAt,
       changeFrequency: "weekly",
       priority: 1,
     },
     {
       url: `${SITE_URL}/kalendarz`,
-      lastModified: events.length > 0
-        ? safeDate(events[0].updated_at, generatedAt)
-        : generatedAt,
+      lastModified: asValidDate(events[0]?.updated_at),
       changeFrequency: "daily",
       priority: 1,
     },
+  ];
+
+  /*
+   * Dodaj poniższe adresy wyłącznie wtedy, gdy są faktycznymi publicznymi
+   * trasami zwracającymi HTTP 200:
+   */
+  routes.push(
     {
       url: `${SITE_URL}/gallery`,
-      lastModified: shows.length > 0
-        ? safeDate(shows[0].updated_at, generatedAt)
-        : generatedAt,
+      lastModified: asValidDate(shows[0]?.updated_at),
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
       url: `${SITE_URL}/relacje`,
-      lastModified: generatedAt,
       changeFrequency: "weekly",
       priority: 0.7,
-    },
-  ];
+    }
+  );
 
-  const eventRoutes: MetadataRoute.Sitemap = events.map((event) => ({
-    url: `${SITE_URL}/airshow/${event.slug}`,
-    lastModified: safeDate(
-      event.updated_at || event.published_at,
-      generatedAt
-    ),
-    changeFrequency: "daily",
-    priority: 0.95,
-  }));
+  for (const event of events) {
+    routes.push({
+      url: `${SITE_URL}/airshow/${event.slug}`,
+      lastModified:
+        asValidDate(event.updated_at) ??
+        asValidDate(event.published_at),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    });
+  }
 
-  const showRoutes: MetadataRoute.Sitemap = shows.map((show) => ({
-    url: `${SITE_URL}/pokaz/${encodeURIComponent(show.id)}`,
-    lastModified: safeDate(show.updated_at, generatedAt),
-    changeFrequency: "monthly",
-    priority: 0.8,
-  }));
+  for (const show of shows) {
+    if (!show.id) {
+      continue;
+    }
 
-  return [
-    ...staticRoutes,
-    ...eventRoutes,
-    ...showRoutes,
-  ];
+    routes.push({
+      url: `${SITE_URL}/pokaz/${encodeURIComponent(show.id)}`,
+      lastModified:
+        asValidDate(show.updated_at) ??
+        asValidDate(show.created_at),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    });
+  }
+
+  return routes;
 }
