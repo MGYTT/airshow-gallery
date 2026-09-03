@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   mapBlogPost,
@@ -67,6 +68,15 @@ function normalizeRelatedShowId(value: unknown) {
 function normalizeRelatedEventId(value: unknown) {
   const eventId = normalizeString(value, 120);
   return eventId || null;
+}
+
+function revalidateBlogPages(slug?: string) {
+  revalidatePath("/blog");
+  revalidatePath("/sitemap.xml");
+
+  if (slug) {
+    revalidatePath(`/blog/${slug}`);
+  }
 }
 
 async function findAvailableSlug(baseSlug: string): Promise<string> {
@@ -228,11 +238,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (error.code === "23505") {
+      return NextResponse.json(
+        { error: "Ten slug jest już używany przez inny wpis." },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: error.message, code: error.code },
       { status: 500 }
     );
   }
+
+  /*
+   * Odświeża indeks bloga, nową stronę artykułu oraz dynamiczną sitemapę.
+   * Działa niezależnie od tego, czy wpis zapisano jako szkic, czy opublikowano.
+   */
+  revalidateBlogPages(data.slug);
 
   return NextResponse.json(
     mapBlogPost(data as DbBlogPost),

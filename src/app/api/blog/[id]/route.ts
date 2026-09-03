@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   mapBlogPost,
@@ -59,6 +60,22 @@ function normalizeCategory(value: unknown): BlogCategory {
   return VALID_CATEGORIES.includes(value as BlogCategory)
     ? (value as BlogCategory)
     : "aktualnosci";
+}
+
+function revalidateBlogPages(...slugs: Array<string | null | undefined>) {
+  revalidatePath("/blog");
+  revalidatePath("/sitemap.xml");
+
+  const uniqueSlugs = new Set(
+    slugs
+      .filter((slug): slug is string => Boolean(slug))
+      .map((slug) => slug.trim())
+      .filter(Boolean)
+  );
+
+  for (const slug of uniqueSlugs) {
+    revalidatePath(`/blog/${slug}`);
+  }
 }
 
 async function isSlugTakenByAnotherPost(slug: string, id: string) {
@@ -163,6 +180,7 @@ export async function PATCH(
     );
   }
 
+  const oldSlug = currentPost.slug as string;
   const update: Record<string, unknown> = {};
 
   if (body.title !== undefined) {
@@ -276,9 +294,8 @@ export async function PATCH(
     update.published = shouldBePublished;
 
     /*
-     * Pierwsze opublikowanie ustawia datę publikacji.
-     * Ukrycie artykułu nie usuwa jej, dzięki czemu ponowna publikacja
-     * nie wygląda w Google jak całkiem nowy materiał.
+     * Pierwsza publikacja otrzymuje datę publikacji.
+     * Po ukryciu i ponownym opublikowaniu zachowujemy jej pierwotną datę.
      */
     if (shouldBePublished && !wasPublished && !currentPost.published_at) {
       update.published_at = new Date().toISOString();
@@ -325,6 +342,15 @@ export async function PATCH(
     );
   }
 
+  /*
+   * Odświeżamy:
+   * - indeks /blog;
+   * - nowy adres wpisu;
+   * - stary adres, gdy slug został zmieniony;
+   * - /sitemap.xml.
+   */
+  revalidateBlogPages(oldSlug, data.slug);
+
   return NextResponse.json(mapBlogPost(data as DbBlogPost));
 }
 
@@ -341,6 +367,37 @@ export async function DELETE(
 
   const { id } = await params;
 
+  /*
+   * Najpierw odczytujemy slug, aby po usunięciu odświeżyć dokładnie
+   * stronę starego artykułu oraz nie pozostawić jej w cache.
+   */
+  const { data: currentPost, error: currentPostError } = await supabaseAdmin
+    .from("blog_posts")
+    .select("slug")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (currentPostError) {
+    console.error(
+      "DELETE /api/blog/[id] — błąd pobierania wpisu:",
+      currentPostError
+    );
+
+    return NextResponse.json(
+      { error: currentPostError.message },
+      { status: 500 }
+    );
+  }
+
+  if (!currentPost) {
+    return NextResponse.json(
+      { error: "Not found" },
+      { status: 404 }
+    );
+  }
+
+  const deletedSlug = currentPost.slug as string;
+
   const { error } = await supabaseAdmin
     .from("blog_posts")
     .delete()
@@ -354,6 +411,8 @@ export async function DELETE(
       { status: 500 }
     );
   }
+
+  revalidateBlogPages(deletedSlug);
 
   return NextResponse.json({ success: true });
 }
