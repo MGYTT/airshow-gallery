@@ -60,32 +60,39 @@ export default function NewsletterForm() {
   return (
     <form onSubmit={handleSubmit} className="nl-form" noValidate>
       <style>{`
-        .nl-form{display:flex;flex-direction:column;gap:14px}
+        .nl-form-card{padding:34px;border-radius:18px;background:color-mix(in srgb,var(--color-surface) 94%,var(--color-bg));box-shadow:0 18px 45px rgba(0,0,0,.06)}
+        .dark .nl-form-card{box-shadow:0 18px 45px rgba(0,0,0,.18)}
+        .nl-form{display:flex;flex-direction:column;gap:15px}
+        .nl-form-title{font-size:24px;line-height:1.05}
+        .nl-form-sub{margin-bottom:24px;font-size:12px;line-height:1.5}
         .nl-email-field{display:block}
-        .nl-field-label{display:block;margin:0 0 8px;color:var(--color-text);font-size:12px;font-weight:800;letter-spacing:.01em}
-        .nl-input-wrap{position:relative;display:flex;align-items:center;min-height:58px;padding:0 16px;border:1px solid var(--color-border);border-radius:13px;background:var(--color-bg);transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+        .nl-field-label{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;color:var(--color-text);font-size:12px;font-weight:800;letter-spacing:.01em}
+        .nl-input-wrap{position:relative;display:flex;align-items:center;min-height:58px;padding:0 16px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-bg);transition:border-color .18s ease,box-shadow .18s ease,background .18s ease,transform .18s ease}
         .nl-input-wrap:hover{border-color:var(--color-text-faint)}
-        .nl-input-wrap:focus-within{border-color:var(--color-accent);background:var(--color-surface);box-shadow:0 0 0 4px var(--color-accent-subtle)}
+        .nl-input-wrap:focus-within{border-color:var(--color-accent);background:var(--color-surface);box-shadow:0 0 0 4px var(--color-accent-subtle),0 6px 18px rgba(0,0,0,.04);transform:translateY(-1px)}
         .nl-input-wrap input{width:100%;min-width:0;padding:0;border:0;outline:0;background:transparent;color:var(--color-text);font-family:var(--font-body);font-size:16px;line-height:1.4;font-weight:500;letter-spacing:-.01em}
-        .nl-input-wrap input::placeholder{color:var(--color-text-faint);opacity:.9}
-        .nl-input-wrap:focus-within input::placeholder{opacity:.55}
-        .nl-email-mark{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;margin-left:12px;border-radius:8px;background:var(--color-surface-offset);color:var(--color-text-faint);font-size:12px;font-weight:900;order:2}
-        .nl-consent-check{display:grid;grid-template-columns:18px 1fr;gap:10px;align-items:start;cursor:pointer}
-        .nl-consent-check input{appearance:none;width:18px;height:18px;margin:1px 0 0;border:1px solid var(--color-border-strong,var(--color-border));border-radius:5px;background:var(--color-bg);display:grid;place-items:center;cursor:pointer;transition:background .18s,border-color .18s}
+        .nl-input-wrap input::placeholder{color:var(--color-text-faint);opacity:.85}
+        .nl-input-wrap:focus-within input::placeholder{opacity:.5}
+        .nl-email-mark{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;margin-left:12px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);color:var(--color-text-faint);font-family:var(--font-body);font-size:12px;font-weight:800;order:2;transition:color .18s,border-color .18s,background .18s}
+        .nl-input-wrap:focus-within .nl-email-mark{border-color:color-mix(in srgb,var(--color-accent) 35%,var(--color-border));background:var(--color-accent-subtle);color:var(--color-accent)}
+        .nl-consent-check{display:grid;grid-template-columns:18px 1fr;gap:10px;align-items:start;cursor:pointer;padding-top:2px}
+        .nl-consent-check input{appearance:none;width:18px;height:18px;margin:1px 0 0;border:1px solid var(--color-border);border-radius:5px;background:var(--color-bg);display:grid;place-items:center;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+        .nl-consent-check input:hover{border-color:var(--color-text-faint)}
         .nl-consent-check input:checked{background:var(--color-accent);border-color:var(--color-accent)}
         .nl-consent-check input:checked::after{content:'✓';color:#fff;font-size:12px;font-weight:900;line-height:1}
+        .nl-consent-check input:active{transform:scale(.94)}
         .nl-consent-check input:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}
-        .nl-consent-check span{color:var(--color-text-muted);font-size:11.5px;line-height:1.55}
-        .nl-submit{width:100%;min-height:54px;justify-content:space-between;padding-inline:18px;border-radius:12px}
+        .nl-consent-check span{color:var(--color-text-muted);font-size:11.5px;line-height:1.6}
+        .nl-submit{width:100%;min-height:54px;justify-content:space-between;padding:0 17px;border-radius:12px}
         .nl-submit > svg:last-child{transition:transform .18s ease}.nl-submit:hover > svg:last-child{transform:translateX(3px)}
-        .nl-consent{margin:0;color:var(--color-text-faint);font-size:10.5px;line-height:1.55}
+        .nl-consent{margin:1px 0 0;color:var(--color-text-faint);font-size:10px;line-height:1.55}
         .nl-honeypot{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}
-        .nl-form-success{display:flex;gap:13px;align-items:flex-start;padding:18px;border:1px solid color-mix(in srgb,var(--color-accent) 55%,var(--color-border));border-radius:14px;background:var(--color-accent-subtle)}
+        .nl-form-success{display:flex;gap:13px;align-items:flex-start;padding:20px;border:1px solid color-mix(in srgb,var(--color-accent) 45%,var(--color-border));border-radius:14px;background:var(--color-accent-subtle)}
         .nl-success-icon{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:50%;background:var(--color-accent);color:#fff}
         .nl-success-copy strong{display:block;color:var(--color-text);font-size:13px;font-weight:800}.nl-success-copy p{margin:4px 0 0;color:var(--color-text-muted);font-size:12px;line-height:1.55}
-        .nl-error{margin:-2px 0 0;color:var(--color-accent);font-size:11.5px;line-height:1.5;font-weight:700}
+        .nl-error{margin:-1px 0 0;padding:9px 11px;border:1px solid color-mix(in srgb,var(--color-accent) 30%,var(--color-border));border-radius:9px;background:var(--color-accent-subtle);color:var(--color-accent);font-size:11.5px;line-height:1.5;font-weight:700}
         .nl-spin{animation:nlspin .8s linear infinite}@keyframes nlspin{to{transform:rotate(360deg)}}
-        @media(max-width:560px){.nl-input-wrap{min-height:54px;padding:0 14px}.nl-input-wrap input{font-size:15px}.nl-submit{min-height:52px}}
+        @media(max-width:560px){.nl-form-card{padding:24px 20px;border-radius:16px}.nl-input-wrap{min-height:54px;padding:0 14px}.nl-input-wrap input{font-size:15px}.nl-submit{min-height:52px}}
       `}</style>
 
       <div className="nl-email-field">
