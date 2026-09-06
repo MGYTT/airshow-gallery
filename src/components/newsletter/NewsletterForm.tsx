@@ -5,12 +5,20 @@ import { ArrowRight, Check, Loader2, Mail } from "lucide-react";
 
 export default function NewsletterForm() {
   const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!consent) {
+      setStatus("error");
+      setMessage("Zaznacz zgodę na otrzymywanie newslettera.");
+      return;
+    }
+
     setStatus("loading");
     setMessage("");
 
@@ -18,7 +26,7 @@ export default function NewsletterForm() {
       const response = await fetch("/api/newsletter/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, website }),
+        body: JSON.stringify({ email, website, consent: true }),
       });
 
       const data = (await response.json()) as { message?: string };
@@ -28,8 +36,9 @@ export default function NewsletterForm() {
       }
 
       setStatus("success");
-      setMessage(data.message || "Sprawdź swoją skrzynkę i potwierdź zapis.");
+      setMessage(data.message || "Adres został dodany do AirShow Alert.");
       setEmail("");
+      setConsent(false);
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Wystąpił błąd. Spróbuj ponownie.");
@@ -41,7 +50,7 @@ export default function NewsletterForm() {
       <div className="nl-form-success" role="status" aria-live="polite">
         <div className="nl-success-icon" aria-hidden="true"><Check size={20} /></div>
         <div>
-          <strong>Jeszcze jeden krok ✈️</strong>
+          <strong>Gotowe ✈️</strong>
           <p>{message}</p>
         </div>
       </div>
@@ -79,6 +88,19 @@ export default function NewsletterForm() {
         className="nl-honeypot"
       />
 
+      <label className="nl-consent-check">
+        <input
+          type="checkbox"
+          name="consent"
+          checked={consent}
+          onChange={(event) => setConsent(event.target.checked)}
+          disabled={status === "loading"}
+        />
+        <span>
+          Chcę otrzymywać newsletter AirShow Alert na podany adres e-mail. Mogę wypisać się w każdej chwili.
+        </span>
+      </label>
+
       <button type="submit" className="btn btn-primary nl-submit" disabled={status === "loading"}>
         {status === "loading" ? <Loader2 size={16} className="nl-spin" /> : <Mail size={16} />}
         {status === "loading" ? "Zapisywanie…" : "Dołączam do AirShow Alert"}
@@ -90,7 +112,7 @@ export default function NewsletterForm() {
       )}
 
       <p className="nl-consent">
-        Zapis jest bezpłatny. Po wysłaniu formularza otrzymasz wiadomość z prośbą o potwierdzenie adresu e-mail. Możesz wypisać się w każdej chwili.
+        Zapis jest bezpłatny. Newsletter zawiera informacje o pokazach lotniczych, nowych galeriach i materiałach AirShow Gallery.
       </p>
     </form>
   );
