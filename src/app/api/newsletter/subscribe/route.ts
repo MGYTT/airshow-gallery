@@ -37,12 +37,21 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = (await request.json()) as { email?: unknown; website?: unknown };
+    const body = (await request.json()) as {
+      email?: unknown;
+      website?: unknown;
+      consent?: unknown;
+    };
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
     const website = typeof body.website === "string" ? body.website.trim() : "";
+    const consent = body.consent === true;
 
     if (website) {
-      return NextResponse.json({ message: "Sprawdź swoją skrzynkę i potwierdź zapis." });
+      return NextResponse.json({ message: "Adres został przyjęty." });
+    }
+
+    if (!consent) {
+      return NextResponse.json({ message: "Wymagana jest zgoda na otrzymywanie newslettera." }, { status: 400 });
     }
 
     if (!isValidEmail(email) || email.length > 254) {
@@ -67,6 +76,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         email,
         groups: [groupId],
+        status: "active",
       }),
       cache: "no-store",
     });
@@ -82,7 +92,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Nie udało się zapisać. Spróbuj ponownie za chwilę." }, { status: 502 });
     }
 
-    return NextResponse.json({ message: "Sprawdź swoją skrzynkę i potwierdź zapis do AirShow Alert." });
+    return NextResponse.json({ message: "Adres został dodany do AirShow Alert." });
   } catch (error) {
     console.error("Newsletter subscribe error:", error);
     return NextResponse.json({ message: "Wystąpił błąd. Spróbuj ponownie za chwilę." }, { status: 500 });
