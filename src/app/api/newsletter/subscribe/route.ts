@@ -51,7 +51,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!consent) {
-      return NextResponse.json({ message: "Wymagana jest zgoda na otrzymywanie newslettera." }, { status: 400 });
+      return NextResponse.json(
+        { message: "Wymagana jest zgoda na otrzymywanie newslettera." },
+        { status: 400 }
+      );
     }
 
     if (!isValidEmail(email) || email.length > 254) {
@@ -63,7 +66,10 @@ export async function POST(request: NextRequest) {
 
     if (!apiToken || !groupId) {
       console.error("Newsletter: brak MAILERLITE_API_TOKEN lub MAILERLITE_GROUP_ID.");
-      return NextResponse.json({ message: "Newsletter nie jest jeszcze skonfigurowany." }, { status: 503 });
+      return NextResponse.json(
+        { message: "Newsletter nie jest jeszcze skonfigurowany." },
+        { status: 503 }
+      );
     }
 
     const response = await fetch(MAILERLITE_API_URL, {
@@ -76,7 +82,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         email,
         groups: [groupId],
-        status: "active",
+        status: "unconfirmed",
       }),
       cache: "no-store",
     });
@@ -86,15 +92,26 @@ export async function POST(request: NextRequest) {
       console.error("MailerLite signup error:", response.status, errorText);
 
       if (response.status === 422) {
-        return NextResponse.json({ message: "Nie udało się przetworzyć tego adresu. Sprawdź go i spróbuj ponownie." }, { status: 422 });
+        return NextResponse.json(
+          { message: "Nie udało się przetworzyć tego adresu. Sprawdź go i spróbuj ponownie." },
+          { status: 422 }
+        );
       }
 
-      return NextResponse.json({ message: "Nie udało się zapisać. Spróbuj ponownie za chwilę." }, { status: 502 });
+      return NextResponse.json(
+        { message: "Nie udało się zapisać. Spróbuj ponownie za chwilę." },
+        { status: 502 }
+      );
     }
 
-    return NextResponse.json({ message: "Adres został dodany do AirShow Alert." });
+    return NextResponse.json({
+      message: "Sprawdź swoją skrzynkę i kliknij link potwierdzający, aby dołączyć do AirShow Alert.",
+    });
   } catch (error) {
     console.error("Newsletter subscribe error:", error);
-    return NextResponse.json({ message: "Wystąpił błąd. Spróbuj ponownie za chwilę." }, { status: 500 });
+    return NextResponse.json(
+      { message: "Wystąpił błąd. Spróbuj ponownie za chwilę." },
+      { status: 500 }
+    );
   }
 }
