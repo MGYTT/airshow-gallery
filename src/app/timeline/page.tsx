@@ -20,8 +20,10 @@ export default function TimelinePage() {
       <style jsx>{`
         .timeline-page { min-height: 100vh; overflow: hidden; background: var(--color-bg); }
         .hero { max-width: 1120px; margin: 0 auto; padding: 72px 24px 56px; }
-        .back { display: inline-flex; align-items: center; gap: 8px; color: var(--color-text-faint); font-size: 13px; text-decoration: none; margin-bottom: 56px; transition: color .2s ease, transform .2s ease; }
-        .back:hover { color: var(--color-text); transform: translateX(-3px); }
+        .back { display: inline-flex; align-items: center; gap: 10px; color: var(--color-text-muted); font-size: 12px; font-weight: 700; letter-spacing: .02em; text-decoration: none; margin-bottom: 56px; padding: 7px 12px 7px 7px; border: 1px solid var(--color-border); border-radius: 999px; background: color-mix(in srgb, var(--color-bg) 88%, var(--color-text) 12%); box-shadow: 0 8px 28px rgba(0,0,0,.08); transition: color .2s ease, border-color .2s ease, background .2s ease, transform .2s ease, box-shadow .2s ease; }
+        .back-icon { width: 25px; height: 25px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--color-text); background: var(--color-border); transition: color .2s ease, background .2s ease, transform .2s ease; }
+        .back:hover { color: var(--color-text); border-color: color-mix(in srgb, var(--color-accent) 42%, var(--color-border)); background: color-mix(in srgb, var(--color-bg) 82%, var(--color-accent) 18%); transform: translateY(-2px); box-shadow: 0 12px 34px rgba(0,0,0,.12); }
+        .back:hover .back-icon { color: #fff; background: var(--color-accent); transform: translateX(-2px); }
         .eyebrow { display: flex; align-items: center; gap: 10px; color: var(--color-accent); font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 18px; }
         .eyebrow::before { content: ""; width: 28px; height: 1px; background: var(--color-accent); }
         h1 { margin: 0; max-width: 760px; font-family: var(--font-display); font-size: clamp(3.2rem, 8vw, 7rem); line-height: .9; letter-spacing: -.065em; font-weight: 900; }
@@ -52,8 +54,9 @@ export default function TimelinePage() {
         @keyframes lineGlow { 0%,100% { opacity: .45; } 50% { opacity: 1; } }
         @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
         @media (max-width: 700px) {
-          .hero { padding: 34px 18px 34px; }
-          .back { margin-bottom: 34px; font-size: 12px; }
+          .hero { padding: 28px 18px 34px; }
+          .back { gap: 8px; margin-bottom: 32px; padding: 6px 11px 6px 6px; font-size: 11px; box-shadow: none; }
+          .back-icon { width: 24px; height: 24px; }
           .eyebrow { font-size: 9px; letter-spacing: .13em; margin-bottom: 14px; }
           .eyebrow::before { width: 20px; }
           h1 { font-size: clamp(3rem, 16vw, 4.5rem); line-height: .88; }
@@ -88,12 +91,15 @@ export default function TimelinePage() {
         @keyframes revealMobile { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
         @media (prefers-reduced-motion: reduce) {
           .content, .line::after, .final-icon { animation: none; }
-          .back, .marker, .event:hover .marker { transition: none; }
+          .back, .back-icon, .marker, .event:hover .marker { transition: none; }
         }
       `}</style>
 
       <section className="hero">
-        <Link href="/" className="back"><ArrowLeft size={15} /> Wróć na stronę główną</Link>
+        <Link href="/" className="back">
+          <span className="back-icon"><ArrowLeft size={13} strokeWidth={2.5} /></span>
+          <span>Wróć na stronę główną</span>
+        </Link>
         <div className="eyebrow">MGYT SPOTTING · TIMELINE</div>
         <h1>Moja historia.</h1>
         <p className="intro">Od pierwszych pikników lotniczych w Nowym Targu, przez fascynację F-16, aż po własne fotograficzne archiwum. Ta historia nadal się pisze.</p>
