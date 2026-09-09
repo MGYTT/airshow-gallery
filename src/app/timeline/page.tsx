@@ -1,57 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDown, ArrowLeft, ArrowUpRight, Plane, Target } from "lucide-react";
+import { ArrowDown, ArrowLeft, Plane, Target } from "lucide-react";
 
 const timeline = [
-  {
-    year: "~2010",
-    kicker: "POCZĄTEK",
-    title: "Wszystko zaczęło się od pikników",
-    text: "Gdy byłem mały, rodzice zabierali mnie na pikniki lotnicze w Nowym Targu. Pamiętam przede wszystkim emocje — samoloty na niebie, ogromną liczbę maszyn, hałas i ryk silników. Wtedy nie znałem jeszcze nazw samolotów ani nie wiedziałem zbyt wiele o lotnictwie. Po prostu uwielbiałem patrzeć w niebo.",
-  },
-  {
-    year: "2021",
-    kicker: "ZAINTERESOWANIE",
-    title: "Zacząłem patrzeć w niebo inaczej",
-    text: "Zwykłe jeżdżenie na pokazy zaczęło przeradzać się w prawdziwą ciekawość lotnictwa. Coraz częściej sprawdzałem, jakie samoloty przelatują nade mną, kto je wyprodukował, do jakiej linii należą i skąd oraz dokąd lecą.",
-  },
-  {
-    year: "2021+",
-    kicker: "F-16",
-    title: "Zapalnik do pasji",
-    text: "Szczególne miejsce zajęły dla mnie samoloty myśliwskie. Duży wpływ na moje zainteresowanie F-16 miał śp. ppłk pil. Maciej „Slab” Krakowian, pilot F-16 i lider F-16 Tiger Demo Team Poland. To właśnie on był jednym z głównych zapalników, które skierowały moją pasję mocniej w stronę myśliwców, ich możliwości i potężnych silników.",
-  },
-  {
-    year: "PÓŹNIEJ",
-    kicker: "FOTOGRAFIA",
-    title: "Pierwsze zdjęcia",
-    text: "W pewnym momencie samo oglądanie samolotów przestało mi wystarczać. Chciałem je również zatrzymywać na zdjęciach. Zaczynałem starym Lumixem — bez dużego obiektywu, wielkiej matrycy i jakości współczesnego sprzętu. Najważniejsze było jednak to, że mogłem spróbować uchwycić samolot i zachować ten moment na dłużej.",
-  },
-  {
-    year: "2025",
-    kicker: "NATO DAYS",
-    title: "Pierwszy poważny wyjazd",
-    text: "NATO Days w Czechach były moim pierwszym naprawdę poważnym wyjazdem fotograficznym. Byłem ogromnie podekscytowany, wiedząc, że zobaczę i będę fotografował maszyny, które wcześniej znałem głównie ze zdjęć i filmów — od Eurofightera Typhoona po B-52. Ten wyjazd pokazał mi, jak bardzo chcę rozwijać się w fotografii lotniczej.",
-  },
-  {
-    year: "2026",
-    kicker: "MGYT SPOTTING",
-    title: "Własna nazwa, własna droga",
-    text: "MGYT to moja własna nazwa, a „spotting” najlepiej opisuje to, czym się zajmuję — obserwowaniem i fotografowaniem samolotów. Znam twórczość fotografów takich jak Hesja czy Gawronsky, ale nie znam ich osobiście i nigdy nie miałem z nimi kontaktu. Po prostu wiem, że istnieją i doceniam ich pracę. Nie porównuję się do nich — każdy ma swoją drogę i sposób patrzenia na lotnictwo.",
-  },
-  {
-    year: "2026",
-    kicker: "AIRSHOW GALLERY",
-    title: "Własne miejsce w internecie",
-    text: "Chciałem pokazywać swoje zdjęcia nie tylko na Instagramie. Inspiracją były strony innych fotografów lotniczych, ale przede wszystkim chciałem stworzyć własne miejsce i własne archiwum. Tak powstała MGYT AirShow Gallery — galeria połączona z kalendarzem wydarzeń lotniczych i miejscem, które może rozwijać się razem z moją pasją.",
-  },
-  {
-    year: "TERAZ",
-    kicker: "DALSZY ROZWÓJ",
-    title: "To dopiero początek",
-    text: "Najbardziej interesują mnie starsze konstrukcje wojskowe, samoloty myśliwskie oraz ciężkie samoloty transportowe i odrzutowe. Chcę poprawiać jakość zdjęć, rozwijać swoje umiejętności i odwiedzać coraz więcej pokazów lotniczych.",
-  },
+  { year: "~2010", kicker: "POCZĄTEK", title: "Wszystko zaczęło się od pikników", text: "Gdy byłem mały, rodzice zabierali mnie na pikniki lotnicze w Nowym Targu. Pamiętam przede wszystkim emocje — samoloty na niebie, ogromną liczbę maszyn, hałas i ryk silników. Wtedy nie znałem jeszcze nazw samolotów ani nie wiedziałem zbyt wiele o lotnictwie. Po prostu uwielbiałem patrzeć w niebo." },
+  { year: "2021", kicker: "ZAINTERESOWANIE", title: "Zacząłem patrzeć w niebo inaczej", text: "Zwykłe jeżdżenie na pokazy zaczęło przeradzać się w prawdziwą ciekawość lotnictwa. Coraz częściej sprawdzałem, jakie samoloty przelatują nade mną, kto je wyprodukował, do jakiej linii należą i skąd oraz dokąd lecą." },
+  { year: "2021+", kicker: "F-16", title: "Zapalnik do pasji", text: "Szczególne miejsce zajęły dla mnie samoloty myśliwskie. Duży wpływ na moje zainteresowanie F-16 miał śp. ppłk pil. Maciej „Slab” Krakowian, pilot F-16 i lider F-16 Tiger Demo Team Poland. To właśnie on był jednym z głównych zapalników, które skierowały moją pasję mocniej w stronę myśliwców, ich możliwości i potężnych silników." },
+  { year: "PÓŹNIEJ", kicker: "FOTOGRAFIA", title: "Pierwsze zdjęcia", text: "W pewnym momencie samo oglądanie samolotów przestało mi wystarczać. Chciałem je również zatrzymywać na zdjęciach. Zaczynałem starym Lumixem — bez dużego obiektywu, wielkiej matrycy i jakości współczesnego sprzętu. Najważniejsze było jednak to, że mogłem spróbować uchwycić samolot i zachować ten moment na dłużej." },
+  { year: "2025", kicker: "NATO DAYS", title: "Pierwszy poważny wyjazd", text: "NATO Days w Czechach były moim pierwszym naprawdę poważnym wyjazdem fotograficznym. Byłem ogromnie podekscytowany, wiedząc, że zobaczę i będę fotografował maszyny, które wcześniej znałem głównie ze zdjęć i filmów — od Eurofightera Typhoona po B-52. Ten wyjazd pokazał mi, jak bardzo chcę rozwijać się w fotografii lotniczej." },
+  { year: "2026", kicker: "MGYT SPOTTING", title: "Własna nazwa, własna droga", text: "MGYT to moja własna nazwa, a „spotting” najlepiej opisuje to, czym się zajmuję — obserwowaniem i fotografowaniem samolotów. Znam twórczość fotografów takich jak Hesja czy Gawronsky, ale nie znam ich osobiście i nigdy nie miałem z nimi kontaktu. Po prostu wiem, że istnieją i doceniam ich pracę. Nie porównuję się do nich — każdy ma swoją drogę i sposób patrzenia na lotnictwo." },
+  { year: "2026", kicker: "AIRSHOW GALLERY", title: "Własne miejsce w internecie", text: "Chciałem pokazywać swoje zdjęcia nie tylko na Instagramie. Inspiracją były strony innych fotografów lotniczych, ale przede wszystkim chciałem stworzyć własne miejsce i własne archiwum. Tak powstała MGYT AirShow Gallery — galeria połączona z kalendarzem wydarzeń lotniczych i miejscem, które może rozwijać się razem z moją pasją." },
+  { year: "TERAZ", kicker: "DALSZY ROZWÓJ", title: "To dopiero początek", text: "Najbardziej interesują mnie starsze konstrukcje wojskowe, samoloty myśliwskie oraz ciężkie samoloty transportowe i odrzutowe. Chcę poprawiać jakość zdjęć, rozwijać swoje umiejętności i odwiedzać coraz więcej pokazów lotniczych." },
 ];
 
 export default function TimelinePage() {
@@ -92,21 +52,40 @@ export default function TimelinePage() {
         @keyframes lineGlow { 0%,100% { opacity: .45; } 50% { opacity: 1; } }
         @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
         @media (max-width: 700px) {
-          .hero { padding: 44px 20px 40px; }
-          .back { margin-bottom: 42px; }
-          .timeline-wrap { padding: 20px 20px 70px 42px; }
-          .line { left: 24px; transform: none; bottom: 40px; }
-          .line::after { width: 2px; }
-          .event { display: block; min-height: auto; padding: 0 0 54px; }
+          .hero { padding: 34px 18px 34px; }
+          .back { margin-bottom: 34px; font-size: 12px; }
+          .eyebrow { font-size: 9px; letter-spacing: .13em; margin-bottom: 14px; }
+          .eyebrow::before { width: 20px; }
+          h1 { font-size: clamp(3rem, 16vw, 4.5rem); line-height: .88; }
+          .intro { margin-top: 20px; font-size: 14px; line-height: 1.65; }
+          .scroll-hint { margin-top: 28px; font-size: 9px; letter-spacing: .11em; }
+          .timeline-wrap { margin: 0; padding: 8px 18px 62px 62px; }
+          .line { left: 29px; top: 0; bottom: 28px; background: linear-gradient(to bottom, var(--color-divider), transparent); }
+          .line::after { width: 2px; height: 22%; box-shadow: 0 0 12px var(--color-accent); }
+          .event { display: block; min-height: 0; padding: 0 0 48px; }
           .event:nth-child(odd) .content, .event:nth-child(even) .content { padding: 0; text-align: left; }
-          .marker { left: 24px; top: 4px; }
-          .event:nth-child(odd) .text { margin-left: 0; }
-          .year { font-size: 2.7rem; }
-          .kicker { margin-top: 8px; }
-          .title { margin-top: 10px; }
-          .text { font-size: 13px; line-height: 1.7; }
-          .final { padding: 54px 20px 80px; }
+          .marker { left: 29px; top: 2px; width: 11px; height: 11px; border-width: 2px; box-shadow: 0 0 0 1px var(--color-accent), 0 0 12px var(--color-accent); }
+          .event:hover .marker { transform: translateX(-50%); box-shadow: 0 0 0 1px var(--color-accent), 0 0 12px var(--color-accent); }
+          .content { animation: revealMobile .65s cubic-bezier(.16,1,.3,1) both; }
+          .year { font-size: 2.45rem; letter-spacing: -.055em; }
+          .kicker { margin-top: 7px; font-size: 9px; letter-spacing: .14em; }
+          .title { margin: 9px 0 10px; font-size: 1.35rem; line-height: 1.08; }
+          .text { font-size: 13px; line-height: 1.7; max-width: none; }
+          .final { margin-top: 0; padding: 52px 18px 74px; }
+          .final-icon { width: 42px; height: 42px; margin-bottom: 20px; }
+          .final h2 { font-size: clamp(2.35rem, 12vw, 3.5rem); }
+          .final p { margin-top: 18px; font-size: 13px; line-height: 1.65; }
+          .future { margin-top: 22px; padding: 8px 12px; font-size: 9px; }
         }
+        @media (max-width: 380px) {
+          .hero { padding-left: 16px; padding-right: 16px; }
+          .timeline-wrap { padding-left: 56px; padding-right: 16px; }
+          .line, .marker { left: 25px; }
+          .year { font-size: 2.2rem; }
+          .title { font-size: 1.22rem; }
+          .text { font-size: 12.5px; }
+        }
+        @keyframes revealMobile { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
         @media (prefers-reduced-motion: reduce) {
           .content, .line::after, .final-icon { animation: none; }
           .back, .marker, .event:hover .marker { transition: none; }
