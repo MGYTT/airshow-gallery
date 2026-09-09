@@ -1,18 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Instagram, Mail, Camera, MapPin, ExternalLink, Heart, ArrowUpRight } from "lucide-react";
+import { Instagram, Mail, Camera, MapPin, ExternalLink, Heart } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   const navigation = [
-    { href: "/", label: "Strona główna", short: "Start" },
-    { href: "/gallery", label: "Galeria zdjęć", short: "Galeria" },
-    { href: "/kalendarz", label: "Kalendarz", short: "Kalendarz" },
-    { href: "/blog", label: "Blog", short: "Blog" },
-    { href: "/#pokazy", label: "Pokazy lotnicze", short: "Pokazy" },
-    { href: "/#o-mnie", label: "O mnie", short: "O mnie" },
+    { href: "/", label: "Start" },
+    { href: "/gallery", label: "Galeria" },
+    { href: "/kalendarz", label: "Kalendarz" },
+    { href: "/blog", label: "Blog" },
+    { href: "/#pokazy", label: "Pokazy" },
+    { href: "/#o-mnie", label: "O mnie" },
   ];
 
   return (
@@ -27,20 +27,17 @@ export default function Footer() {
         .footer-brand { max-width: 100%; }
         @media (min-width: 640px) { .footer-brand { grid-column: 1 / -1; } }
         @media (min-width: 1024px) { .footer-brand { grid-column: auto; max-width: 380px; } }
-        .section-label { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-faint); margin-bottom: var(--space-4); }
+        .section-label { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-faint); margin-bottom: 10px; }
 
-        /* Nawigacja — bardziej kompaktowa, elegancka i wyraźna */
-        .footer-navigation { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 420px; }
-        .footer-nav-card { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 50px; padding: 10px 12px 10px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-offset); color: var(--color-text-muted); text-decoration: none; overflow: hidden; transition: transform .2s cubic-bezier(.16,1,.3,1), background .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease; }
-        .footer-nav-card::before { position: absolute; left: 0; top: 10px; bottom: 10px; width: 2px; border-radius: 2px; background: var(--color-accent); content: ""; opacity: 0; transform: scaleY(.5); transition: opacity .2s ease, transform .2s ease; }
-        .footer-nav-card:hover { transform: translateY(-2px); border-color: var(--color-accent); background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-sm); }
-        .footer-nav-card:hover::before { opacity: 1; transform: scaleY(1); }
-        .footer-nav-card-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-        .footer-nav-card-short { font-size: var(--text-sm); font-weight: 650; line-height: 1.2; }
-        .footer-nav-card-label { font-size: 10px; line-height: 1.2; color: var(--color-text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .footer-nav-arrow { flex-shrink: 0; opacity: .35; transition: opacity .2s ease, transform .2s ease; }
-        .footer-nav-card:hover .footer-nav-arrow { opacity: 1; transform: translate(2px,-2px); color: var(--color-accent); }
-        @media (max-width: 420px) { .footer-navigation { grid-template-columns: 1fr; } }
+        /* Minimalistyczna nawigacja stopki */
+        .footer-navigation { display: flex; flex-wrap: wrap; gap: 6px; max-width: 460px; }
+        .footer-nav-link { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-full); background: transparent; color: var(--color-text-muted); font-size: var(--text-xs); font-weight: 600; text-decoration: none; letter-spacing: .01em; transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease; }
+        .footer-nav-link:hover { background: var(--color-accent-subtle); border-color: var(--color-accent); color: var(--color-accent); transform: translateY(-1px); }
+        .footer-nav-link:active { transform: scale(.98); }
+        @media (max-width: 639px) {
+          .footer-navigation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; max-width: none; }
+          .footer-nav-link { width: 100%; min-height: 34px; padding: 6px 5px; font-size: 11px; }
+        }
 
         .footer-social-link { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); border: 1px solid var(--color-border); background: transparent; color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 500; text-decoration: none; min-height: 56px; transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease; }
         .footer-social-link:hover { background: var(--color-surface-2); border-color: var(--color-accent); color: var(--color-text); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
@@ -97,13 +94,9 @@ export default function Footer() {
               <div>
                 <p className="section-label">Nawigacja</p>
                 <nav className="footer-navigation" aria-label="Nawigacja w stopce">
-                  {navigation.map(({ href, label, short }) => (
-                    <Link key={href} href={href} className="footer-nav-card">
-                      <span className="footer-nav-card-main">
-                        <span className="footer-nav-card-short">{short}</span>
-                        <span className="footer-nav-card-label">{label}</span>
-                      </span>
-                      <ArrowUpRight size={15} className="footer-nav-arrow" aria-hidden="true" />
+                  {navigation.map(({ href, label }) => (
+                    <Link key={href} href={href} className="footer-nav-link">
+                      {label}
                     </Link>
                   ))}
                 </nav>
