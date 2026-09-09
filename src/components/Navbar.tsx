@@ -9,7 +9,6 @@ const NAV_LINKS = [
   { href: "/", label: "Start" },
   { href: "/gallery", label: "Galeria" },
   { href: "/kalendarz", label: "Kalendarz" },
-  { href: "/blog", label: "Blog" },
   { href: "/#pokazy", label: "Pokazy" },
   { href: "/#o-mnie", label: "O mnie" },
 ];
@@ -43,7 +42,6 @@ export default function Navbar() {
     const basePath = href.split("#")[0];
     if (!basePath || basePath === "/") return false;
     if (href === "/gallery") return pathname.startsWith("/gallery") || pathname.startsWith("/pokaz");
-    if (href === "/blog") return pathname.startsWith("/blog");
     if (href === "/kalendarz") return pathname.startsWith("/kalendarz") || pathname.startsWith("/airshow");
     return pathname.startsWith(basePath);
   }, [pathname]);
