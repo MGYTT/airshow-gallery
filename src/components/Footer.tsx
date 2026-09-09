@@ -11,6 +11,7 @@ export default function Footer() {
     { href: "/gallery", label: "Galeria" },
     { href: "/kalendarz", label: "Kalendarz" },
     { href: "/blog", label: "Blog" },
+    { href: "/timeline", label: "Moja historia" },
     { href: "/#pokazy", label: "Pokazy" },
     { href: "/#o-mnie", label: "O mnie" },
   ];
@@ -28,8 +29,6 @@ export default function Footer() {
         @media (min-width: 640px) { .footer-brand { grid-column: 1 / -1; } }
         @media (min-width: 1024px) { .footer-brand { grid-column: auto; max-width: 380px; } }
         .section-label { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-faint); margin-bottom: 10px; }
-
-        /* Minimalistyczna nawigacja stopki */
         .footer-navigation { display: flex; flex-wrap: wrap; gap: 6px; max-width: 460px; }
         .footer-nav-link { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-full); background: transparent; color: var(--color-text-muted); font-size: var(--text-xs); font-weight: 600; text-decoration: none; letter-spacing: .01em; transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease; }
         .footer-nav-link:hover { background: var(--color-accent-subtle); border-color: var(--color-accent); color: var(--color-accent); transform: translateY(-1px); }
@@ -38,7 +37,6 @@ export default function Footer() {
           .footer-navigation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; max-width: none; }
           .footer-nav-link { width: 100%; min-height: 34px; padding: 6px 5px; font-size: 11px; }
         }
-
         .footer-social-link { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); border: 1px solid var(--color-border); background: transparent; color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 500; text-decoration: none; min-height: 56px; transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease; }
         .footer-social-link:hover { background: var(--color-surface-2); border-color: var(--color-accent); color: var(--color-text); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
         .footer-social-link:active { transform: scale(0.98); }
