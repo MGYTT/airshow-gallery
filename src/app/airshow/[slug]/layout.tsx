@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -49,7 +50,7 @@ export default async function AirshowEventLayout({
   children,
   params,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
   params: Promise<{ slug: string }>;
 }>) {
   const { slug } = await params;
