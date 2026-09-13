@@ -24,18 +24,20 @@ export default function Footer() {
         .footer-bg-text { position: absolute; bottom: -0.15em; right: -0.02em; font-family: var(--font-display); font-weight: 900; font-size: clamp(6rem, 18vw, 18rem); line-height: 1; color: var(--color-text); opacity: 0.025; user-select: none; pointer-events: none; letter-spacing: -0.06em; white-space: nowrap; }
         .footer-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-10); margin-bottom: var(--space-4); }
         @media (min-width: 640px) { .footer-grid { grid-template-columns: 1fr 1fr; gap: var(--space-8); } }
-        @media (min-width: 1024px) { .footer-grid { grid-template-columns: 1.5fr 1fr 1fr; gap: var(--space-12); } }
+        @media (min-width: 1024px) { .footer-grid { grid-template-columns: 1.5fr minmax(180px, .7fr) minmax(240px, .9fr); gap: var(--space-12); } }
         .footer-brand { max-width: 100%; }
         @media (min-width: 640px) { .footer-brand { grid-column: 1 / -1; } }
         @media (min-width: 1024px) { .footer-brand { grid-column: auto; max-width: 380px; } }
-        .section-label { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-faint); margin-bottom: 10px; }
-        .footer-navigation { display: flex; flex-wrap: wrap; gap: 6px; max-width: 460px; }
-        .footer-nav-link { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-full); background: transparent; color: var(--color-text-muted); font-size: var(--text-xs); font-weight: 600; text-decoration: none; letter-spacing: .01em; transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease; }
-        .footer-nav-link:hover { background: var(--color-accent-subtle); border-color: var(--color-accent); color: var(--color-accent); transform: translateY(-1px); }
-        .footer-nav-link:active { transform: scale(.98); }
+        .section-label { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-faint); margin-bottom: 12px; }
+        .footer-navigation { display: flex; flex-direction: column; align-items: stretch; gap: 3px; width: 100%; max-width: 240px; }
+        .footer-nav-link { display: flex; align-items: center; justify-content: flex-start; min-height: 42px; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 600; text-decoration: none; letter-spacing: .01em; transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease; }
+        .footer-nav-link::before { content: ""; width: 3px; height: 3px; border-radius: 999px; background: var(--color-text-faint); margin-right: 10px; transition: width .18s ease, height .18s ease, background .18s ease; }
+        .footer-nav-link:hover { background: var(--color-accent-subtle); border-color: var(--color-border); color: var(--color-accent); transform: translateX(3px); }
+        .footer-nav-link:hover::before { width: 5px; height: 5px; background: var(--color-accent); }
+        .footer-nav-link:active { transform: translateX(1px) scale(.99); }
         @media (max-width: 639px) {
-          .footer-navigation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; max-width: none; }
-          .footer-nav-link { width: 100%; min-height: 34px; padding: 6px 5px; font-size: 11px; }
+          .footer-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; max-width: none; }
+          .footer-nav-link { width: 100%; min-height: 40px; padding: 7px 9px; font-size: 12px; }
         }
         .footer-social-link { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); border: 1px solid var(--color-border); background: transparent; color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 500; text-decoration: none; min-height: 56px; transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease; }
         .footer-social-link:hover { background: var(--color-surface-2); border-color: var(--color-accent); color: var(--color-text); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
