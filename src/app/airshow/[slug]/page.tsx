@@ -261,7 +261,7 @@ function getCountdownText(event: MappedAirshowEvent) {
   return `Za ${days} dni`;
 }
 
-function formatDateRange(startDate: string, endDate: string | null) {
+function formatDateRange(startDate: string, endDate: string | null, timeZone = "Europe/Warsaw") {
   const start = new Date(startDate);
   const end = endDate ? new Date(endDate) : null;
 
@@ -273,6 +273,7 @@ function formatDateRange(startDate: string, endDate: string | null) {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone,
   });
 
   if (!end || Number.isNaN(end.getTime())) {
@@ -305,7 +306,7 @@ function formatDateRange(startDate: string, endDate: string | null) {
   return `${formatter.format(start)} – ${formatter.format(end)}`;
 }
 
-function formatFullDate(value: string | null) {
+function formatFullDate(value: string | null, timeZone = "Europe/Warsaw") {
   if (!value) {
     return "";
   }
@@ -320,6 +321,7 @@ function formatFullDate(value: string | null) {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone,
   }).format(date);
 }
 
@@ -663,7 +665,7 @@ export async function generateMetadata({
   }
 
   const pageUrl = `${SITE_URL}/airshow/${event.slug}`;
-  const date = formatDateRange(event.startDate, event.endDate);
+  const date = formatDateRange(event.startDate, event.endDate, event.timezone);
   const description = safeText(
     event.shortDescription ||
       event.longDescription ||
@@ -742,7 +744,7 @@ export default async function AirshowEventPage({
   const pageUrl = `${SITE_URL}/airshow/${event.slug}`;
   const mapUrl = buildGoogleMapsUrl(event);
   const statusMeta = EVENT_STATUS_META[event.status];
-  const dateLabel = formatDateRange(event.startDate, event.endDate);
+  const dateLabel = formatDateRange(event.startDate, event.endDate, event.timezone);
   const countdown = getCountdownText(event);
   const confirmedLineup = lineup.filter((item) => item.status === "confirmed");
   const visibleLineup = lineup.filter((item) => item.status !== "cancelled");
