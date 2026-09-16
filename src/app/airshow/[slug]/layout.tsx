@@ -1,36 +1,89 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { cache } from "react";
 
-const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://airshow-gallery.vercel.app"
-).replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://airshow-gallery.vercel.app").replace(/\/$/, "");
+const BASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const API_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const DEFAULT_KEYWORDS = [
-  "pokazy lotnicze",
-  "airshow",
-  "kalendarz pokazów lotniczych",
-  "wydarzenia lotnicze",
-  "fotografia lotnicza",
-  "spotting",
-  "samoloty",
-  "MGYT Spotting",
-];
+type EventRow = {
+  name: string;
+  slug: string;
+  short_description: string;
+  long_description: string;
+  start_date: string;
+  end_date: string | null;
+  timezone: string;
+  country: string;
+  country_code: string;
+  city: string;
+  venue_name: string;
+  address: string;
+  cover_image: string;
+  image_alt: string;
+  official_url: string;
+  admission_type: string;
+  status: string;
+  event_type: string;
+};
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+const getEvent = cache(async (slug: string): Promise<EventRow | null> => {
+  if (!BASE || !API_KEY) return null;
+  const response = await fetch(
+    `${BASE}/rest/v1/airshow_events?slug=eq.${encodeURIComponent(slug)}&published=eq.true&limit=1`,
+    { headers: { apikey: API_KEY, Authorization: `Bearer ${API_KEY}` }, next: { revalidate: 300 } }
+  );
+  if (!response.ok) return null;
+  const rows = (await response.json()) as EventRow[];
+  return rows[0] ?? null;
+});
+
+function description(event: EventRow) {
+  return event.short_description || event.long_description || `${event.name} — termin, program, bilety, dojazd i informacje dla odwiedzających.`;
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  const event = await getEvent(slug);
   const canonical = `${SITE_URL}/airshow/${slug}`;
 
+  if (!event) {
+    return { title: "Pokaz lotniczy | MGYT AirShow Gallery", robots: { index: false, follow: true } };
+  }
+
+  const title = `${event.name} — program, termin, bilety i informacje`;
+  const image = event.cover_image || `${SITE_URL}/og-image.png`;
+
   return {
-    keywords: DEFAULT_KEYWORDS,
-    category: "event",
-    applicationName: "MGYT AirShow Gallery",
-    alternates: {
-      canonical,
+    title,
+    description: description(event),
+    keywords: [
+      event.name,
+      "pokaz lotniczy",
+      "airshow",
+      "pokazy lotnicze",
+      "kalendarz pokazów lotniczych",
+      "program pokazu lotniczego",
+      "samoloty",
+      event.city,
+      event.country,
+      "MGYT AirShow Gallery",
+    ].filter(Boolean),
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      url: canonical,
+      siteName: "MGYT AirShow Gallery",
+      locale: "pl_PL",
+      title,
+      description: description(event),
+      images: [{ url: image, alt: event.image_alt || event.name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: description(event),
+      images: [image],
     },
     robots: {
       index: true,
@@ -49,11 +102,9 @@ export async function generateMetadata({
 export default async function AirshowEventLayout({
   children,
   params,
-}: Readonly<{
-  children: ReactNode;
-  params: Promise<{ slug: string }>;
-}>) {
+}: Readonly<{ children: ReactNode; params: Promise<{ slug: string }> }>) {
   const { slug } = await params;
+  const event = await getEvent(slug);
   const pageUrl = `${SITE_URL}/airshow/${slug}`;
 
   const webPageJsonLd = {
@@ -61,23 +112,54 @@ export default async function AirshowEventLayout({
     "@type": "WebPage",
     "@id": `${pageUrl}#webpage`,
     url: pageUrl,
+    name: event?.name || "Pokaz lotniczy",
+    description: event ? description(event) : undefined,
     inLanguage: "pl-PL",
-    isPartOf: {
-      "@type": "WebSite",
-      "@id": `${SITE_URL}#website`,
-      url: SITE_URL,
-      name: "MGYT AirShow Gallery",
-    },
+    isPartOf: { "@type": "WebSite", "@id": `${SITE_URL}#website`, url: SITE_URL, name: "MGYT AirShow Gallery" },
+    primaryImageOfPage: event?.cover_image ? { "@type": "ImageObject", url: event.cover_image } : undefined,
   };
+
+  const eventJsonLd = event ? {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "@id": `${pageUrl}#event`,
+    name: event.name,
+    description: description(event),
+    url: pageUrl,
+    image: event.cover_image ? [event.cover_image] : undefined,
+    startDate: event.start_date,
+    endDate: event.end_date || undefined,
+    eventStatus: `https://schema.org/Event${event.status === "cancelled" ? "Cancelled" : event.status === "postponed" ? "Postponed" : event.status === "rescheduled" ? "Rescheduled" : "Scheduled"}`,
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    location: {
+      "@type": "Place",
+      name: event.venue_name || event.city,
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: event.address || undefined,
+        addressLocality: event.city,
+        addressCountry: event.country_code || event.country,
+      },
+      ...(event.official_url ? { sameAs: event.official_url } : {}),
+    },
+    offers: event.admission_type === "free" ? {
+      "@type": "Offer",
+      price: 0,
+      priceCurrency: "CZK",
+      availability: "https://schema.org/InStock",
+      url: pageUrl,
+    } : undefined,
+    organizer: {
+      "@type": "Organization",
+      name: "MGYT AirShow Gallery",
+      url: SITE_URL,
+    },
+  } : null;
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(webPageJsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageJsonLd).replace(/</g, "\\u003c") }} />
+      {eventJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd).replace(/</g, "\\u003c") }} />}
       {children}
     </>
   );
