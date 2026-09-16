@@ -331,6 +331,7 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
 
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [editingLineupId, setEditingLineupId] = useState<string | null>(null);
+  const [draggedLineupId, setDraggedLineupId] = useState<string | null>(null);
 
   const publicUrl = form.slug ? `/airshow/${form.slug}` : "/airshow/twoj-slug";
 
@@ -599,6 +600,47 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
       setLineupDraft(emptyLineupDraft(lineupDraft.programDate));
       setNotice("Dodano pozycję programu.");
     } catch (caughtError) {
+      setError(getErrorMessage(caughtError));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function reorderLineup(draggedId: string, targetId: string) {
+    if (!eventId || draggedId === targetId || busyAction) return;
+    const ordered = [...lineup].sort((a, b) =>
+      (a.programDate || "").localeCompare(b.programDate || "") ||
+      (a.startTime || "99:99").localeCompare(b.startTime || "99:99") ||
+      a.sortOrder - b.sortOrder
+    );
+    const from = ordered.findIndex((item) => item.id === draggedId);
+    const to = ordered.findIndex((item) => item.id === targetId);
+    if (from < 0 || to < 0) return;
+    const next = [...ordered];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    const previous = lineup;
+    setLineup(next.map((item, index) => ({ ...item, sortOrder: index })));
+    setDraggedLineupId(null);
+    setBusyAction("reorder-lineup");
+    setError(null);
+    setNotice(null);
+    try {
+      await Promise.all(next.map((item, index) =>
+        fetch(`/api/events/${eventId}/lineup/${item.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortOrder: index }),
+        }).then(async (response) => {
+          if (!response.ok) {
+            const payload = await response.json().catch(() => null);
+            throw new Error(getApiError(payload, "Nie udało się zapisać kolejności programu."));
+          }
+        })
+      ));
+      setNotice("Kolejność programu została zapisana.");
+    } catch (caughtError) {
+      setLineup(previous);
       setError(getErrorMessage(caughtError));
     } finally {
       setBusyAction(null);
@@ -914,6 +956,7 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
         .event-form-toggle input:checked::after{transform:translateX(20px)}
         .event-form-list{display:flex;flex-direction:column;gap:var(--space-3)}
         .event-form-list-item{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-4);padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface-offset)}
+        .event-form-lineup-draggable{cursor:grab;transition:transform .15s ease,opacity .15s ease}.event-form-lineup-draggable:active{cursor:grabbing}.event-form-lineup-draggable.is-dragging{opacity:.55;transform:scale(.99)}.event-form-drag-hint{font-size:10px;font-weight:700;color:var(--color-text-faint);margin-bottom:var(--space-2);letter-spacing:.02em}
         .event-form-icon-button{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text-muted);cursor:pointer}.event-form-icon-button:hover{color:var(--color-accent);border-color:var(--color-accent)}
         .event-form-item-actions{display:flex;align-items:center;gap:var(--space-2);flex-shrink:0}
         .event-form-danger{width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:#dc2626;border:1px solid rgba(220,38,38,.25);background:rgba(220,38,38,.06)}
@@ -1276,7 +1319,7 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
                     const style = statusStyle(item.status);
 
                     return (
-                      <article key={item.id} className="event-form-list-item">
+                      <article key={item.id} className={`event-form-list-item event-form-lineup-draggable${draggedLineupId === item.id ? " is-dragging" : ""}`} draggable={!busyAction} onDragStart={() => setDraggedLineupId(item.id)} onDragEnd={() => setDraggedLineupId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (draggedLineupId) void reorderLineup(draggedLineupId, item.id); }}>
                         <div style={{ minWidth:0 }}>
                           <div style={{ display:"flex", alignItems:"center", gap:"var(--space-2)", flexWrap:"wrap", marginBottom:"var(--space-2)" }}>
                             <span style={{ fontSize:"10px", fontWeight:800, letterSpacing:".06em", textTransform:"uppercase", padding:"3px var(--space-2)", borderRadius:"var(--radius-full)", color:style.color, background:style.bg }}>
