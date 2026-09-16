@@ -51,13 +51,17 @@ export default function AdminSubmissionsPage() {
 
   async function changeStatus(next: Status) {
     if(!selected)return;
+    await saveStatus(selected, next, note);
+  }
+
+  async function saveStatus(item: Submission, next: Status, adminNote: string) {
     setSaving(true);setError("");
     try {
-      const response=await fetch("/api/submissions/"+selected.id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:next,adminNote:note})});
+      const response=await fetch("/api/submissions/"+item.id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:next,adminNote})});
       const data=await response.json().catch(()=>null);
       if(!response.ok)throw new Error(data?.error??"Nie udało się zapisać zgłoszenia.");
-      setItems(current=>current.map(item=>item.id===selected.id?{...item,...data}:item));
-      setSelected(null);setNote("");
+      setItems(current=>current.map(currentItem=>currentItem.id===item.id?{...currentItem,...data}:currentItem));
+      if(selected?.id===item.id){setSelected(null);setNote("");}
     }catch(e){setError(e instanceof Error?e.message:"Nie udało się zapisać zgłoszenia.");}
     finally{setSaving(false);}
   }
@@ -86,7 +90,7 @@ export default function AdminSubmissionsPage() {
       <div style={{display:"flex",gap:9,alignItems:"center",flexWrap:"wrap"}}><span className="sub-type">{item.type==="event_proposal"?<CalendarPlus size={12}/>:<Bug size={12}/>} {item.type==="event_proposal"?"Propozycja wydarzenia":"Poprawka"}</span><span className={"sub-status "+item.status}>{labels[item.status]}</span></div>
       <h2>{item.title || "Bez tytułu"}</h2><p>{item.message}</p>
       <div className="sub-meta"><span><Clock3 size={11} style={{verticalAlign:"-2px"}}/> {formatDate(item.createdAt)}</span>{item.event&&<span>📅 {item.event.name}</span>}{item.contactEmail&&<span>✉ {item.contactEmail}</span>}</div>
-    </div><div className="sub-actions"><button className="sub-btn" onClick={()=>{setSelected(item);setNote(item.adminNote??"")}}>Otwórz <ArrowUpRight size={13}/></button>{item.status==="pending"&&<><button className="sub-btn green" onClick={()=>{setSelected(item);setNote(item.adminNote??"") ;setTimeout(()=>changeStatus("accepted"),0)}}><Check size={13}/> Akceptuj</button><button className="sub-btn red" onClick={()=>{setSelected(item);setNote(item.adminNote??"");setTimeout(()=>changeStatus("rejected"),0)}}><X size={13}/> Odrzuć</button></>}</div>
+    </div><div className="sub-actions"><button className="sub-btn" onClick={()=>{setSelected(item);setNote(item.adminNote??"")}}>Otwórz <ArrowUpRight size={13}/></button>{item.status==="pending"&&<><button className="sub-btn green" onClick={()=>saveStatus(item,"accepted",item.adminNote??"")}><Check size={13}/> Akceptuj</button><button className="sub-btn red" onClick={()=>saveStatus(item,"rejected",item.adminNote??"")}><X size={13}/> Odrzuć</button></>}</div>
     </article>)}</div> : <div className="sub-empty"><FileCheck2 size={28}/><b>Brak zgłoszeń w tym widoku</b><span>Możesz zmienić filtr albo poczekać na nowe zgłoszenia.</span></div>}
 
     {selected&&<div className="sub-modal-bg" onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null)}}><section className="sub-modal" role="dialog" aria-modal="true" aria-labelledby="submission-title">
