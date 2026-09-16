@@ -1379,10 +1379,17 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
                   <input id="lineup-source-url" type="url" className="input" value={lineupDraft.sourceUrl} onChange={(event) => setLineupDraft((previous) => ({ ...previous, sourceUrl:event.target.value }))} placeholder="https://…" disabled={!isEdit} />
                 </div>
 
-                <button type="button" className="btn btn-primary" style={{ marginTop:"var(--space-5)" }} onClick={addLineupItem} disabled={!isEdit || busyAction === "add-lineup"}>
-                  {busyAction === "add-lineup" ? <Loader2 size={15} style={{ animation:"event-form-spin 1s linear infinite" }}/> : <Plus size={15}/>}
-                  Dodaj do programu
-                </button>
+                <div style={{ display:"flex", gap:"var(--space-2)", flexWrap:"wrap", marginTop:"var(--space-5)" }}>
+                  <button type="button" className="btn btn-primary" onClick={editingLineupId ? saveLineupItem : addLineupItem} disabled={!isEdit || !!busyAction}>
+                    {busyAction ? <Loader2 size={15} style={{ animation:"event-form-spin 1s linear infinite" }}/> : editingLineupId ? <Check size={15}/> : <Plus size={15}/>}
+                    {editingLineupId ? "Zapisz zmiany" : "Dodaj do programu"}
+                  </button>
+                  {editingLineupId && (
+                    <button type="button" className="btn btn-subtle" onClick={cancelEditLineupItem} disabled={!!busyAction}>
+                      <X size={15}/> Anuluj edycję
+                    </button>
+                  )}
+                </div>
               </div>
             </section>
 
