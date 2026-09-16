@@ -367,3 +367,46 @@ export type MappedAirshowEvent = ReturnType<typeof mapAirshowEvent>;
 export type MappedAirshowEventLineup = ReturnType<typeof mapAirshowEventLineup>;
 export type MappedAirshowEventUpdate = ReturnType<typeof mapAirshowEventUpdate>;
 export type MappedAirshowEventShowLink = ReturnType<typeof mapAirshowEventShowLink>;
+// ─────────────────────────────────────────────────────────────
+// PUBLIC CONTENT SUBMISSIONS
+// ─────────────────────────────────────────────────────────────
+export type ContentSubmissionType = "event_proposal" | "correction";
+export type ContentSubmissionStatus = "pending" | "reviewing" | "accepted" | "rejected";
+
+export interface DbContentSubmission {
+  id: string;
+  type: ContentSubmissionType;
+  status: ContentSubmissionStatus;
+  event_id: string | null;
+  show_id: string | null;
+  page_url: string;
+  title: string;
+  message: string;
+  source_url: string;
+  contact_email: string | null;
+  admin_note: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
+export function mapContentSubmission(item: DbContentSubmission) {
+  return {
+    id: item.id,
+    type: item.type,
+    status: item.status,
+    eventId: item.event_id,
+    showId: item.show_id,
+    pageUrl: item.page_url,
+    title: item.title,
+    message: item.message,
+    sourceUrl: item.source_url,
+    contactEmail: item.contact_email,
+    adminNote: item.admin_note,
+    createdAt: item.created_at,
+    reviewedAt: item.reviewed_at,
+    reviewedBy: item.reviewed_by,
+  };
+}
+
+export type MappedContentSubmission = ReturnType<typeof mapContentSubmission>;
