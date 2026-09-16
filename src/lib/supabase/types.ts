@@ -229,8 +229,9 @@ export interface DbAirshowEvent {
 }
 
 export interface DbAirshowEventLineup {
-  id:          string;
-  event_id:    string;
+  id:           string;
+  event_id:     string;
+  program_date: string | null;
   title:       string;
   description: string;
   category:    AirshowLineupCategory;
@@ -323,6 +324,7 @@ export function mapAirshowEventLineup(item: DbAirshowEventLineup) {
   return {
     id:          item.id,
     eventId:     item.event_id,
+    programDate: item.program_date,
     title:       item.title,
     description: item.description ?? "",
     category:    item.category,
