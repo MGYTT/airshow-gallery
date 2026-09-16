@@ -20,6 +20,7 @@ import {
   Play,
   CalendarDays,
   BookOpen,
+  ClipboardCheck,
 } from "lucide-react";
 
 const NAV = [
@@ -60,6 +61,11 @@ const NAV = [
     icon: Play,
   },
   {
+    href: "/admin/submissions",
+    label: "Zgłoszenia",
+    icon: ClipboardCheck,
+  },
+  {
     href: "/admin/settings",
     label: "Ustawienia",
     icon: Settings,
@@ -75,6 +81,7 @@ const crumbMap: Record<string, string> = {
   new: "Nowe wydarzenie",
   settings: "Ustawienia",
   stories: "Relacje",
+  submissions: "Zgłoszenia",
   blog: "Blog",
 };
 
@@ -155,6 +162,7 @@ export default function AdminLayout({
       "/admin/shows",
       "/admin/calendar",
       "/admin/blog",
+      "/admin/submissions",
     ].includes(item.href)
   );
 
