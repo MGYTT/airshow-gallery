@@ -954,57 +954,51 @@ export default async function AirshowEventPage({
         .airshow-event-fact-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint)}
         .airshow-event-fact-value{display:block;margin-top:2px;font-size:var(--text-sm);font-weight:700;color:var(--color-text);line-height:1.35}
         .airshow-event-program{display:flex;flex-direction:column;gap:var(--space-5)}
-        .airshow-event-program-day{isolation:isolate}
-        .airshow-event-program-day{position:relative;overflow:hidden;padding:0;border:1px solid var(--color-border);border-radius:var(--radius-xl);background:var(--color-surface);box-shadow:var(--shadow-sm)}
+        .airshow-event-program-day{position:relative;isolation:isolate;overflow:hidden;padding:0;border:1px solid var(--color-border);border-radius:var(--radius-xl);background:var(--color-surface);box-shadow:var(--shadow-sm)}
         .airshow-event-program-day::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent)}
         .airshow-event-program-day-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-5) var(--space-6);background:linear-gradient(135deg,var(--color-surface-offset),var(--color-surface));border-bottom:1px solid var(--color-border)}
-        .airshow-event-program-day-head-main{display:flex;align-items:center;gap:var(--space-3)}
+        .airshow-event-program-day-head-main{display:flex;align-items:center;gap:var(--space-3);min-width:0}
         .airshow-event-program-day-icon{width:42px;height:42px;display:grid;place-items:center;flex:none;border-radius:var(--radius-lg);background:var(--color-accent-subtle);color:var(--color-accent)}
         .airshow-event-program-kicker{display:block;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent);margin-bottom:2px}
         .airshow-event-program-day-head h3{font-family:var(--font-display);font-size:var(--text-lg);font-weight:900;letter-spacing:-.025em;text-transform:capitalize}
-        .airshow-event-program-count{display:inline-flex;align-items:center;min-height:30px;padding:0 var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:800;color:var(--color-text-muted);white-space:nowrap;background:var(--color-surface)}
-        .airshow-event-program .airshow-event-lineup{margin:0;padding:var(--space-3)}
-        .airshow-event-lineup-item{position:relative;display:grid;grid-template-columns:112px minmax(0,1fr);gap:var(--space-4);padding:var(--space-5);border:1px solid transparent;border-radius:var(--radius-lg);background:var(--color-surface);transition:background var(--transition),border-color var(--transition),transform var(--transition)}
-        .airshow-event-lineup-item:hover{background:var(--color-surface-offset);border-color:var(--color-border);transform:translateX(2px)}
+        .airshow-event-program-count{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:800;color:var(--color-text-muted);white-space:nowrap;background:var(--color-surface)}
+        .airshow-event-program .airshow-event-lineup{display:flex;flex-direction:column;margin:0;padding:var(--space-3);gap:var(--space-2)}
+        .airshow-event-lineup-item{position:relative;display:grid;grid-template-columns:110px minmax(0,1fr);gap:var(--space-5);align-items:center;padding:var(--space-5);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface);transition:background var(--transition),border-color var(--transition),transform var(--transition)}
+        .airshow-event-lineup-item:hover{background:var(--color-surface-offset);border-color:var(--color-border-strong);transform:translateY(-1px)}
         .airshow-event-lineup-item.is-cancelled{opacity:.72}
-        .airshow-event-lineup-time strong{font-size:clamp(1.05rem,2vw,1.25rem);letter-spacing:-.03em}
-        .airshow-event-lineup-time small{line-height:1.3}
-        .airshow-event-lineup-time{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding-right:var(--space-4);border-right:1px solid var(--color-divider);font-family:var(--font-display);font-size:var(--text-base);font-weight:900}
-        .airshow-event-lineup-time small{font-family:inherit;font-size:10px;color:var(--color-text-faint);font-weight:700}
-        .airshow-event-lineup-body{min-width:0}
-        .airshow-event-lineup-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-2)}
-        .airshow-event-lineup-status{padding:3px 8px;border-radius:var(--radius-full);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
-        .airshow-event-lineup-category{font-size:10px;color:var(--color-text-faint);text-align:right}
-        .airshow-event-lineup-name{font-family:var(--font-display);font-size:var(--text-base);font-weight:850;letter-spacing:-.02em}
-        .airshow-event-lineup-description{margin-top:var(--space-2);font-size:var(--text-xs);line-height:1.65;color:var(--color-text-muted)}
-        .airshow-event-lineup-meta{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-3);font-size:var(--text-xs);color:var(--color-text-faint)}
-        .airshow-event-program-day-note{padding:0 var(--space-6) var(--space-4);font-size:10px;color:var(--color-text-faint)}
-        @media(max-width:640px){
-          .airshow-event-program{gap:var(--space-4)}
-          .airshow-event-program-day{border-radius:var(--radius-lg)}
-          .airshow-event-program-day-head{padding:var(--space-4);align-items:flex-start}
-          .airshow-event-program-day-icon{width:36px;height:36px}
-          .airshow-event-program-day-head h3{font-size:var(--text-base)}
-          .airshow-event-program-count{font-size:10px;min-height:28px}
-          .airshow-event-program .airshow-event-lineup{padding:var(--space-2)}
-          .airshow-event-lineup-item{grid-template-columns:64px minmax(0,1fr);gap:var(--space-3);padding:var(--space-4)}
-          .airshow-event-lineup-time{font-size:var(--text-sm);padding-right:var(--space-3)}
-          .airshow-event-lineup-top{align-items:flex-start;flex-direction:column;gap:var(--space-2)}
-          .airshow-event-lineup-category{text-align:left}
-        }
-        .airshow-event-lineup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}
-        .airshow-event-lineup-item{padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface)}
-        .airshow-event-lineup-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3)}
-        .airshow-event-lineup-status{padding:3px 8px;border-radius:var(--radius-full);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
+        .airshow-event-lineup-time{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:58px;padding-right:var(--space-5);border-right:1px solid var(--color-divider);font-family:var(--font-display);font-size:clamp(1.05rem,2vw,1.25rem);font-weight:900;line-height:1.05;text-align:center;letter-spacing:-.03em}
+        .airshow-event-lineup-time small{font-family:inherit;font-size:10px;color:var(--color-text-faint);font-weight:700;letter-spacing:0}
+        .airshow-event-lineup-body{min-width:0;text-align:center}
+        .airshow-event-lineup-top{display:flex;align-items:center;justify-content:center;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-3)}
+        .airshow-event-lineup-status{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:var(--radius-full);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;line-height:1}
         .lineup-status--confirmed{color:#15803d;background:rgba(22,163,74,.10)}
         .lineup-status--expected{color:var(--color-gold);background:var(--color-gold-subtle)}
         .lineup-status--unconfirmed{color:var(--color-text-muted);background:var(--color-surface-offset)}
         .lineup-status--cancelled{color:#dc2626;background:rgba(220,38,38,.10)}
-        .airshow-event-lineup-category{font-size:10px;color:var(--color-text-faint);text-align:right}
-        .airshow-event-lineup-name{font-family:var(--font-display);font-size:var(--text-base);font-weight:800;letter-spacing:-.02em}
-        .airshow-event-lineup-description{margin-top:var(--space-2);font-size:var(--text-xs);line-height:1.65;color:var(--color-text-muted)}
-        .airshow-event-lineup-meta{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-3);font-size:var(--text-xs);color:var(--color-text-faint)}
-        .airshow-event-lineup-source{color:var(--color-accent);font-weight:800}
+        .airshow-event-lineup-category{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:3px 8px;border:1px solid var(--color-border);border-radius:var(--radius-full);font-size:10px;color:var(--color-text-muted);font-weight:700;text-align:center;background:var(--color-surface-offset)}
+        .airshow-event-lineup-name{font-family:var(--font-display);font-size:var(--text-base);font-weight:850;letter-spacing:-.02em;line-height:1.25}
+        .airshow-event-lineup-description{max-width:62ch;margin:var(--space-2) auto 0;font-size:var(--text-xs);line-height:1.65;color:var(--color-text-muted)}
+        .airshow-event-lineup-meta{display:flex;align-items:center;justify-content:center;gap:var(--space-2) var(--space-4);flex-wrap:wrap;margin-top:var(--space-3);font-size:var(--text-xs);color:var(--color-text-faint)}
+        .airshow-event-lineup-meta span{display:inline-flex;align-items:center;justify-content:center}
+        .airshow-event-lineup-source{color:var(--color-accent);font-weight:800;text-decoration:none}
+        .airshow-event-lineup-source:hover{text-decoration:underline}
+        .airshow-event-program-day-note{padding:0 var(--space-6) var(--space-4);font-size:10px;color:var(--color-text-faint);text-align:center}
+        @media(max-width:640px){
+          .airshow-event-program{gap:var(--space-4)}
+          .airshow-event-program-day{border-radius:var(--radius-lg)}
+          .airshow-event-program-day-head{padding:var(--space-4);align-items:center}
+          .airshow-event-program-day-head-main{justify-content:flex-start}
+          .airshow-event-program-day-icon{width:36px;height:36px}
+          .airshow-event-program-day-head h3{font-size:var(--text-base)}
+          .airshow-event-program-count{font-size:10px;min-height:28px}
+          .airshow-event-program .airshow-event-lineup{padding:var(--space-2)}
+          .airshow-event-lineup-item{grid-template-columns:1fr;gap:var(--space-3);padding:var(--space-4)}
+          .airshow-event-lineup-time{min-height:0;padding:0 0 var(--space-3);border-right:0;border-bottom:1px solid var(--color-divider);font-size:var(--text-lg)}
+          .airshow-event-lineup-body{text-align:center}
+          .airshow-event-lineup-top{gap:var(--space-2);margin-bottom:var(--space-3)}
+          .airshow-event-lineup-category{text-align:center}
+          .airshow-event-lineup-meta{gap:var(--space-2) var(--space-3)}
+        }
         .airshow-event-practical-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4)}
         .airshow-event-practical-card{padding:var(--space-5);border:1px solid var(--color-border);border-radius:var(--radius-xl);background:var(--color-surface)}
         .airshow-event-practical-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:var(--radius-lg);background:var(--color-surface-offset);color:var(--color-accent);margin-bottom:var(--space-4)}
