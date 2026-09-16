@@ -123,7 +123,7 @@ function isEventRunning(event: MappedAirshowEvent) {
   return startDate <= startOfToday && endDate >= startOfToday;
 }
 
-function formatDateRange(startDate: string, endDate: string | null) {
+function formatDateRange(startDate: string, endDate: string | null, timeZone = "Europe/Warsaw") {
   const start = new Date(startDate);
   const end = endDate ? new Date(endDate) : null;
 
@@ -135,6 +135,7 @@ function formatDateRange(startDate: string, endDate: string | null) {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone,
   });
 
   if (!end || Number.isNaN(end.getTime())) {
@@ -164,7 +165,7 @@ function formatDateRange(startDate: string, endDate: string | null) {
   return `${fullFormatter.format(start)} – ${fullFormatter.format(end)}`;
 }
 
-function formatMonthBlock(value: string) {
+function formatMonthBlock(value: string, timeZone = "Europe/Warsaw") {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
@@ -174,7 +175,7 @@ function formatMonthBlock(value: string) {
   return {
     day: String(date.getDate()),
     month: date
-      .toLocaleDateString("pl-PL", { month: "short" })
+      .toLocaleDateString("pl-PL", { month: "short", timeZone })
       .replace(".", "")
       .toUpperCase(),
   };
@@ -225,7 +226,7 @@ export default function EventCard({
   isNext = false,
   compact = false,
 }: EventCardProps) {
-  const dateBlock = formatMonthBlock(event.startDate);
+  const dateBlock = formatMonthBlock(event.startDate, event.timezone);
   const status = STATUS_CONFIG[event.status];
   const days = getDaysUntil(event);
   const eventHasPassed =
@@ -561,7 +562,7 @@ export default function EventCard({
           <div className="event-card-meta">
             <span className="event-card-meta-item">
               <CalendarDays size={12} />
-              {formatDateRange(event.startDate, event.endDate)}
+              {formatDateRange(event.startDate, event.endDate, event.timezone)}
             </span>
 
             <span className="event-card-meta-dot" aria-hidden />
