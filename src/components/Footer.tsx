@@ -14,6 +14,7 @@ export default function Footer() {
     { href: "/timeline", label: "Moja historia" },
     { href: "/#pokazy", label: "Pokazy" },
     { href: "/#o-mnie", label: "O mnie" },
+    { href: "/zgloszenie", label: "Zgłoś informację" },
   ];
 
   return (
