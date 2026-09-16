@@ -951,6 +951,14 @@ export default async function AirshowEventPage({
         .airshow-event-fact-icon{width:34px;height:34px;display:grid;place-items:center;flex-shrink:0;border-radius:var(--radius-md);background:var(--color-accent-subtle);color:var(--color-accent)}
         .airshow-event-fact-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint)}
         .airshow-event-fact-value{display:block;margin-top:2px;font-size:var(--text-sm);font-weight:700;color:var(--color-text);line-height:1.35}
+        .airshow-event-program{display:flex;flex-direction:column;gap:var(--space-8)}
+        .airshow-event-program-day{padding:var(--space-5);border:1px solid var(--color-border);border-radius:var(--radius-xl);background:var(--color-surface-offset)}
+        .airshow-event-program-day-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);padding:0 var(--space-1) var(--space-4);border-bottom:1px solid var(--color-divider);margin-bottom:var(--space-4)}
+        .airshow-event-program-kicker{display:block;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent);margin-bottom:var(--space-1)}
+        .airshow-event-program-day-head h3{font-family:var(--font-display);font-size:var(--text-lg);font-weight:900;letter-spacing:-.025em;text-transform:capitalize}
+        .airshow-event-program-count{font-size:var(--text-xs);font-weight:700;color:var(--color-text-faint);white-space:nowrap}
+        .airshow-event-program .airshow-event-lineup{margin:0}
+        @media(max-width:640px){.airshow-event-program-day{padding:var(--space-4)}.airshow-event-program-day-head{align-items:flex-start;flex-direction:column;gap:var(--space-2)}}
         .airshow-event-lineup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}
         .airshow-event-lineup-item{padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface)}
         .airshow-event-lineup-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3)}
@@ -1221,45 +1229,82 @@ export default async function AirshowEventPage({
                   )}
                 </div>
 
-                <div className="airshow-event-lineup">
-                  {visibleLineup.map((item) => (
-                    <article key={item.id} className="airshow-event-lineup-item">
-                      <div className="airshow-event-lineup-top">
-                        <span className={`airshow-event-lineup-status lineup-status--${item.status}`}>
-                          {LINEUP_STATUS_LABELS[item.status]}
-                        </span>
-                        <span className="airshow-event-lineup-category">
-                          {LINEUP_CATEGORY_LABELS[item.category]}
-                        </span>
-                      </div>
+                <div className="airshow-event-program">
+                  {Array.from(
+                    visibleLineup.reduce((groups, item) => {
+                      const key = item.programDate || event.startDate.slice(0, 10);
+                      const items = groups.get(key) ?? [];
+                      items.push(item);
+                      groups.set(key, items);
+                      return groups;
+                    }, new Map<string, MappedAirshowEventLineup[]>())
+                  ).map(([day, items]) => {
+                    const dayDate = new Date(day + "T12:00:00");
+                    const dayLabel = Number.isNaN(dayDate.getTime())
+                      ? day
+                      : new Intl.DateTimeFormat("pl-PL", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        }).format(dayDate);
 
-                      <h3 className="airshow-event-lineup-name">{item.title}</h3>
-
-                      {item.description && (
-                        <p className="airshow-event-lineup-description">{item.description}</p>
-                      )}
-
-                      <div className="airshow-event-lineup-meta">
-                        {item.country && <span>{item.country}</span>}
-                        {item.startTime && (
-                          <span>
-                            {item.startTime.slice(0, 5)}
-                            {item.endTime ? `–${item.endTime.slice(0, 5)}` : ""}
+                    return (
+                      <section key={day} className="airshow-event-program-day">
+                        <div className="airshow-event-program-day-head">
+                          <div>
+                            <span className="airshow-event-program-kicker">Program dnia</span>
+                            <h3>{dayLabel}</h3>
+                          </div>
+                          <span className="airshow-event-program-count">
+                            {items.length} {items.length === 1 ? "pozycja" : items.length < 5 ? "pozycje" : "pozycji"}
                           </span>
-                        )}
-                        {item.sourceUrl && (
-                          <a
-                            href={item.sourceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="airshow-event-lineup-source"
-                          >
-                            Źródło ↗
-                          </a>
-                        )}
-                      </div>
-                    </article>
-                  ))}
+                        </div>
+
+                        <div className="airshow-event-lineup">
+                          {items.map((item) => (
+                            <article key={item.id} className="airshow-event-lineup-item">
+                              <div className="airshow-event-lineup-top">
+                                <span className={`airshow-event-lineup-status lineup-status--${item.status}`}>
+                                  {LINEUP_STATUS_LABELS[item.status]}
+                                </span>
+                                <span className="airshow-event-lineup-category">
+                                  {LINEUP_CATEGORY_LABELS[item.category]}
+                                </span>
+                              </div>
+
+                              <h3 className="airshow-event-lineup-name">{item.title}</h3>
+
+                              {item.description && (
+                                <p className="airshow-event-lineup-description">{item.description}</p>
+                              )}
+
+                              <div className="airshow-event-lineup-meta">
+                                {item.country && <span>{item.country}</span>}
+                                {item.startTime && (
+                                  <span>
+                                    <Clock3 size={12} style={{ verticalAlign: "-2px", marginRight: 4 }} />
+                                    {item.startTime.slice(0, 5)}
+                                    {item.endTime ? `–${item.endTime.slice(0, 5)}` : ""}
+                                  </span>
+                                )}
+                                {item.sourceUrl && (
+                                  <a
+                                    href={item.sourceUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="airshow-event-lineup-source"
+                                  >
+                                    Źródło ↗
+                                  </a>
+                                )}
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
                 </div>
               </section>
             )}
