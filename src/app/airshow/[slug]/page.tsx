@@ -953,8 +953,7 @@ export default async function AirshowEventPage({
         .airshow-event-fact-icon{width:34px;height:34px;display:grid;place-items:center;flex-shrink:0;border-radius:var(--radius-md);background:var(--color-accent-subtle);color:var(--color-accent)}
         .airshow-event-fact-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint)}
         .airshow-event-fact-value{display:block;margin-top:2px;font-size:var(--text-sm);font-weight:700;color:var(--color-text);line-height:1.35}
-        .airshow-event-program{display:flex;flex-direction:column;gap:var(--space-6);position:relative}
-        .airshow-event-program::after{content:"";position:absolute;left:58px;top:74px;bottom:30px;width:1px;background:var(--color-border);pointer-events:none}
+        .airshow-event-program{display:flex;flex-direction:column;gap:var(--space-5)}
         .airshow-event-program-day{isolation:isolate}
         .airshow-event-program-day{position:relative;overflow:hidden;padding:0;border:1px solid var(--color-border);border-radius:var(--radius-xl);background:var(--color-surface);box-shadow:var(--shadow-sm)}
         .airshow-event-program-day::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent)}
@@ -967,9 +966,7 @@ export default async function AirshowEventPage({
         .airshow-event-program .airshow-event-lineup{margin:0;padding:var(--space-3)}
         .airshow-event-lineup-item{position:relative;display:grid;grid-template-columns:112px minmax(0,1fr);gap:var(--space-4);padding:var(--space-5);border:1px solid transparent;border-radius:var(--radius-lg);background:var(--color-surface);transition:background var(--transition),border-color var(--transition),transform var(--transition)}
         .airshow-event-lineup-item:hover{background:var(--color-surface-offset);border-color:var(--color-border);transform:translateX(2px)}
-        .airshow-event-lineup-item::before{content:"";position:absolute;left:52px;top:30px;width:13px;height:13px;border:3px solid var(--color-surface);border-radius:50%;background:var(--color-accent);box-shadow:0 0 0 1px var(--color-border);z-index:2}
         .airshow-event-lineup-item.is-cancelled{opacity:.72}
-        .airshow-event-lineup-item.is-cancelled::before{background:#dc2626}
         .airshow-event-lineup-time strong{font-size:clamp(1.05rem,2vw,1.25rem);letter-spacing:-.03em}
         .airshow-event-lineup-time small{line-height:1.3}
         .airshow-event-lineup-time{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding-right:var(--space-4);border-right:1px solid var(--color-divider);font-family:var(--font-display);font-size:var(--text-base);font-weight:900}
@@ -983,8 +980,6 @@ export default async function AirshowEventPage({
         .airshow-event-lineup-meta{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-3);font-size:var(--text-xs);color:var(--color-text-faint)}
         .airshow-event-program-day-note{padding:0 var(--space-6) var(--space-4);font-size:10px;color:var(--color-text-faint)}
         @media(max-width:640px){
-          .airshow-event-program::after{left:30px;top:64px}
-          .airshow-event-lineup-item::before{left:24px;top:25px;width:11px;height:11px}
           .airshow-event-program{gap:var(--space-4)}
           .airshow-event-program-day{border-radius:var(--radius-lg)}
           .airshow-event-program-day-head{padding:var(--space-4);align-items:flex-start}
@@ -1306,7 +1301,7 @@ export default async function AirshowEventPage({
                           {items.map((item) => (
                             <article key={item.id} className={`airshow-event-lineup-item${item.status === "cancelled" ? " is-cancelled" : ""}`}>
                               <div className="airshow-event-lineup-time">
-                                {item.startTime ? <strong>{item.startTime.slice(0, 5)}</strong> : <strong>—</strong>}
+                                {item.startTime ? item.startTime.slice(0, 5) : "—"}
                                 {item.endTime && <small>do {item.endTime.slice(0, 5)}</small>}
                               </div>
                               <div className="airshow-event-lineup-body">
