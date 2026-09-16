@@ -49,6 +49,11 @@ function normalizeTime(value: unknown) {
   return /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(time) ? time : null;
 }
 
+function normalizeProgramDate(value: unknown) {
+  const date = sanitizeText(value, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -83,8 +88,9 @@ export async function GET(
     .from("airshow_event_lineup")
     .select("*")
     .eq("event_id", id)
-    .order("sort_order", { ascending: true })
-    .order("start_time", { ascending: true });
+    .order("program_date", { ascending: true, nullsFirst: false })
+    .order("start_time", { ascending: true, nullsFirst: false })
+    .order("sort_order", { ascending: true });
 
   if (error) {
     console.error("GET /api/events/[id]/lineup:", error);
@@ -116,6 +122,11 @@ export async function POST(
   const title = sanitizeText(body.title, 180);
   if (!title) {
     return jsonError("Nazwa pozycji programu jest wymagana.", 400);
+  }
+
+  const programDate = normalizeProgramDate(body.programDate);
+  if (body.programDate && !programDate) {
+    return jsonError("Dzień programu ma nieprawidłowy format.", 400);
   }
 
   const category = CATEGORIES.includes(body.category as AirshowLineupCategory)
@@ -155,6 +166,7 @@ export async function POST(
     .from("airshow_event_lineup")
     .insert({
       event_id: id,
+      program_date: programDate,
       title,
       description: sanitizeText(body.description, 3000),
       category,
