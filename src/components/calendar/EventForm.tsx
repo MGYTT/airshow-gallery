@@ -956,7 +956,8 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
         .event-form-toggle input:checked::after{transform:translateX(20px)}
         .event-form-list{display:flex;flex-direction:column;gap:var(--space-3)}
         .event-form-list-item{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-4);padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface-offset)}
-        .event-form-lineup-draggable{cursor:grab;transition:transform .15s ease,opacity .15s ease}.event-form-lineup-draggable:active{cursor:grabbing}.event-form-lineup-draggable.is-dragging{opacity:.55;transform:scale(.99)}.event-form-drag-hint{font-size:10px;font-weight:700;color:var(--color-text-faint);margin-bottom:var(--space-2);letter-spacing:.02em}
+        .event-form-program-board{display:flex;flex-direction:column;gap:var(--space-4)}.event-form-program-day{border:1px solid var(--color-border);border-radius:var(--radius-xl);background:var(--color-surface);overflow:hidden}.event-form-program-day-header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-4) var(--space-5);background:var(--color-surface-offset);border-bottom:1px solid var(--color-border)}.event-form-program-day-kicker{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--color-accent)}.event-form-program-day-header h3{margin-top:3px;font-size:var(--text-base);font-weight:900;text-transform:capitalize}.event-form-program-day-count{font-size:var(--text-xs);font-weight:800;color:var(--color-text-faint);white-space:nowrap}.event-form-program-dropzone{padding:var(--space-2)}.event-form-program-item{display:grid;grid-template-columns:86px minmax(0,1fr) auto;align-items:center;gap:var(--space-4);padding:var(--space-4);border:1px solid transparent;border-radius:var(--radius-lg);cursor:grab}.event-form-program-item:hover{background:var(--color-surface-offset);border-color:var(--color-border)}.event-form-program-time{font-family:var(--font-display);font-size:var(--text-sm);font-weight:900;line-height:1.25}.event-form-program-time span{color:var(--color-text-faint)}.event-form-program-title-row{display:flex;align-items:center;gap:var(--space-2)}.event-form-program-title-row h4{font-size:var(--text-sm);font-weight:850}.event-form-drag-handle{color:var(--color-text-faint);font-weight:900;letter-spacing:-3px}.event-form-program-meta{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:4px;font-size:10px;font-weight:700;color:var(--color-text-faint)}.event-form-program-main p{margin-top:6px;font-size:var(--text-xs);line-height:1.5;color:var(--color-text-muted)}.event-form-program-empty{padding:var(--space-5);text-align:center;font-size:var(--text-xs);color:var(--color-text-faint)}
+        .event-form-lineup-draggable{cursor:grab;transition:transform .15s ease,opacity .15s ease}.event-form-lineup-draggable:active{cursor:grabbing}.event-form-program-dropzone:has(.event-form-lineup-draggable.is-dragging){background:var(--color-surface-offset)}.event-form-lineup-draggable.is-dragging{opacity:.55;transform:scale(.99)}.event-form-drag-hint{font-size:10px;font-weight:700;color:var(--color-text-faint);margin-bottom:var(--space-2);letter-spacing:.02em}
         .event-form-icon-button{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text-muted);cursor:pointer}.event-form-icon-button:hover{color:var(--color-accent);border-color:var(--color-accent)}
         .event-form-item-actions{display:flex;align-items:center;gap:var(--space-2);flex-shrink:0}
         .event-form-danger{width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:#dc2626;border:1px solid rgba(220,38,38,.25);background:rgba(220,38,38,.06)}
@@ -1314,43 +1315,56 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
               {loadingRelated ? (
                 <div className="event-form-empty"><Loader2 size={24} style={{ margin:"0 auto var(--space-3)", animation:"event-form-spin 1s linear infinite" }}/> Ładowanie programu…</div>
               ) : lineup.length > 0 ? (
-                <div className="event-form-list" style={{ marginBottom:"var(--space-6)" }}>
-                  {lineup.map((item) => {
-                    const style = statusStyle(item.status);
-
+                <div className="event-form-program-board" style={{ marginBottom:"var(--space-6)" }}>
+                  {programDays.map((day) => {
+                    const dayItems = lineup
+                      .filter((item) => (item.programDate || "") === day)
+                      .sort((a, b) => (a.startTime || "99:99").localeCompare(b.startTime || "99:99") || a.sortOrder - b.sortOrder);
                     return (
-                      <article key={item.id} className={`event-form-list-item event-form-lineup-draggable${draggedLineupId === item.id ? " is-dragging" : ""}`} draggable={!busyAction} onDragStart={() => setDraggedLineupId(item.id)} onDragEnd={() => setDraggedLineupId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (draggedLineupId) void reorderLineup(draggedLineupId, item.id); }}>
-                        <div style={{ minWidth:0 }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:"var(--space-2)", flexWrap:"wrap", marginBottom:"var(--space-2)" }}>
-                            <span style={{ fontSize:"10px", fontWeight:800, letterSpacing:".06em", textTransform:"uppercase", padding:"3px var(--space-2)", borderRadius:"var(--radius-full)", color:style.color, background:style.bg }}>
-                              {LINEUP_STATUS_OPTIONS.find((option) => option.value === item.status)?.label}
-                            </span>
-                            <span style={{ fontSize:"var(--text-xs)", color:"var(--color-text-faint)" }}>
-                              {LINEUP_CATEGORY_OPTIONS.find((option) => option.value === item.category)?.label}
-                            </span>
+                      <section key={day} className="event-form-program-day">
+                        <header className="event-form-program-day-header">
+                          <div>
+                            <span className="event-form-program-day-kicker">Program dnia</span>
+                            <h3>{formatProgramDate(day)}</h3>
                           </div>
-
-                          <h3 style={{ fontSize:"var(--text-sm)", fontWeight:800, marginBottom:"var(--space-1)" }}>{item.title}</h3>
-
-                          {item.description && (
-                            <p style={{ fontSize:"var(--text-xs)", color:"var(--color-text-muted)", lineHeight:1.6 }}>{item.description}</p>
-                          )}
-
-                          <div style={{ display:"flex", gap:"var(--space-3)", flexWrap:"wrap", marginTop:"var(--space-3)", fontSize:"var(--text-xs)", color:"var(--color-text-faint)" }}>
-                            {item.programDate && <span style={{ color:"var(--color-accent)", fontWeight:700 }}>{formatProgramDate(item.programDate)}</span>}
-                            {item.country && <span>{item.country}</span>}
-                            {item.startTime && <span>{item.startTime.slice(0, 5)}{item.endTime ? `–${item.endTime.slice(0, 5)}` : ""}</span>}
-                            {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color:"var(--color-accent)", fontWeight:700 }}>Źródło ↗</a>}
-                          </div>
+                          <span className="event-form-program-day-count">{dayItems.length} {dayItems.length === 1 ? "pozycja" : dayItems.length < 5 ? "pozycje" : "pozycji"}</span>
+                        </header>
+                        <div className="event-form-program-dropzone" onDragOver={(event) => event.preventDefault()}>
+                          {dayItems.length === 0 ? (
+                            <div className="event-form-program-empty">Przeciągnij tutaj pozycję, aby przypisać ją do tego dnia.</div>
+                          ) : dayItems.map((item, index) => {
+                            const style = statusStyle(item.status);
+                            return (
+                              <article key={item.id} className={`event-form-program-item event-form-lineup-draggable${draggedLineupId === item.id ? " is-dragging" : ""}`}
+                                draggable={!busyAction}
+                                onDragStart={() => setDraggedLineupId(item.id)}
+                                onDragEnd={() => setDraggedLineupId(null)}
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={(event) => { event.preventDefault(); if (draggedLineupId) void reorderLineup(draggedLineupId, item.id); }}>
+                                <div className="event-form-program-time">{item.startTime ? item.startTime.slice(0,5) : "—"}{item.endTime ? <span>–{item.endTime.slice(0,5)}</span> : null}</div>
+                                <div className="event-form-program-main">
+                                  <div className="event-form-program-title-row">
+                                    <span className="event-form-drag-handle" aria-hidden="true">⋮⋮</span>
+                                    <h4>{item.title}</h4>
+                                  </div>
+                                  <div className="event-form-program-meta">
+                                    {item.country && <span>{item.country}</span>}
+                                    <span style={{ color:style.color }}>{LINEUP_STATUS_OPTIONS.find((option) => option.value === item.status)?.label}</span>
+                                    <span>{LINEUP_CATEGORY_OPTIONS.find((option) => option.value === item.category)?.label}</span>
+                                  </div>
+                                  {item.description && <p>{item.description}</p>}
+                                </div>
+                                <div className="event-form-item-actions">
+                                  <button type="button" className="event-form-icon-button" disabled={!!busyAction} onClick={() => startEditLineupItem(item)} aria-label={`Edytuj ${item.title}`} title="Edytuj"><Pencil size={15}/></button>
+                                  <button type="button" className="event-form-danger" disabled={busyAction === `delete-lineup-${item.id}`} onClick={() => deleteLineupItem(item.id)} aria-label={`Usuń ${item.title}`} title="Usuń">
+                                    {busyAction === `delete-lineup-${item.id}` ? <Loader2 size={15} style={{ animation:"event-form-spin 1s linear infinite" }}/> : <Trash2 size={15}/>}
+                                  </button>
+                                </div>
+                              </article>
+                            );
+                          })}
                         </div>
-
-                        <div className="event-form-item-actions">
-                          <button type="button" className="event-form-icon-button" disabled={!!busyAction} onClick={() => startEditLineupItem(item)} aria-label={`Edytuj ${item.title}`} title="Edytuj"><Pencil size={15}/></button>
-                          <button type="button" className="event-form-danger" disabled={busyAction === `delete-lineup-${item.id}`} onClick={() => deleteLineupItem(item.id)} aria-label={`Usuń ${item.title}`} title="Usuń">
-                            {busyAction === `delete-lineup-${item.id}` ? <Loader2 size={15} style={{ animation:"event-form-spin 1s linear infinite" }}/> : <Trash2 size={15}/>}
-                          </button>
-                        </div>
-                      </article>
+                      </section>
                     );
                   })}
                 </div>
