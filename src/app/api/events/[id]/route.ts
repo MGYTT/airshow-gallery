@@ -110,12 +110,39 @@ function normalizePracticalInfo(value: unknown): AirshowPracticalInfo {
   };
 }
 
-function parseDate(value: unknown) {
+function parseDate(value: unknown, timeZone = "Europe/Warsaw") {
   const date = sanitizeText(value, 80);
   if (!date) return null;
 
-  const parsed = new Date(date);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(date)) {
+    const parsed = new Date(date);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(date);
+  if (!match) return null;
+
+  const [, year, month, day, hour, minute, second = "0"] = match;
+  const wallClock = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+
+  const getOffset = (instantMs: number) => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(instantMs));
+    const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+    return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second")) - instantMs;
+  };
+
+  let instant = wallClock - getOffset(wallClock);
+  instant = wallClock - getOffset(instant);
+  return new Date(instant).toISOString();
 }
 
 async function slugExists(slug: string, excludeId: string) {
@@ -228,7 +255,8 @@ export async function PATCH(
   if (body.longDescription !== undefined) update.long_description = sanitizeText(body.longDescription, 15000);
 
   if (body.startDate !== undefined) {
-    const startDate = parseDate(body.startDate);
+    const timezone = sanitizeText(body.timezone, 80) || "Europe/Warsaw";
+  const startDate = parseDate(body.startDate, timezone);
     if (!startDate) return jsonError("Podaj poprawną datę rozpoczęcia.", 400);
     update.start_date = startDate;
   }
