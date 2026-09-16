@@ -330,6 +330,7 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
   const [faqDraft, setFaqDraft] = useState<AirshowFaqItem>({ question: "", answer: "" });
 
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [editingLineupId, setEditingLineupId] = useState<string | null>(null);
 
   const publicUrl = form.slug ? `/airshow/${form.slug}` : "/airshow/twoj-slug";
 
@@ -604,6 +605,66 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
     }
   }
 
+  function startEditLineupItem(item: MappedAirshowEventLineup) {
+    setEditingLineupId(item.id);
+    setLineupDraft({
+      programDate: item.programDate ?? programDays[0] ?? "",
+      title: item.title,
+      description: item.description,
+      category: item.category,
+      status: item.status,
+      country: item.country,
+      startTime: item.startTime?.slice(0, 5) ?? "",
+      endTime: item.endTime?.slice(0, 5) ?? "",
+      sourceUrl: item.sourceUrl,
+    });
+    setError(null);
+    setNotice(null);
+    window.requestAnimationFrame(() => document.getElementById("lineup-program-date")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }
+
+  function cancelEditLineupItem() {
+    setEditingLineupId(null);
+    setLineupDraft(emptyLineupDraft(programDays[0] ?? ""));
+    setError(null);
+  }
+
+  async function saveLineupItem() {
+    if (!eventId || !editingLineupId) return;
+    if (!lineupDraft.programDate) {
+      setError("Wybierz dzień programu.");
+      return;
+    }
+    if (!lineupDraft.title.trim()) {
+      setError("Podaj nazwę pozycji programu.");
+      return;
+    }
+
+    setBusyAction(`edit-lineup-${editingLineupId}`);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/lineup/${editingLineupId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lineupDraft),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(getApiError(payload, "Nie udało się zapisać pozycji programu."));
+
+      const updated = payload as MappedAirshowEventLineup;
+      setLineup((previous) => previous.map((item) => item.id === updated.id ? updated : item));
+      setEditingLineupId(null);
+      setLineupDraft(emptyLineupDraft(updated.programDate ?? programDays[0] ?? ""));
+      setNotice("Pozycja programu została zaktualizowana.");
+    } catch (caughtError) {
+      setError(getErrorMessage(caughtError));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   async function deleteLineupItem(itemId: string) {
     if (!eventId) return;
 
@@ -853,6 +914,7 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
         .event-form-toggle input:checked::after{transform:translateX(20px)}
         .event-form-list{display:flex;flex-direction:column;gap:var(--space-3)}
         .event-form-list-item{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-4);padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface-offset)}
+        .event-form-icon-button{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text-muted);cursor:pointer}.event-form-icon-button:hover{color:var(--color-accent);border-color:var(--color-accent)}
         .event-form-item-actions{display:flex;align-items:center;gap:var(--space-2);flex-shrink:0}
         .event-form-danger{width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:#dc2626;border:1px solid rgba(220,38,38,.25);background:rgba(220,38,38,.06)}
         .event-form-danger:hover{background:rgba(220,38,38,.14)}
@@ -1240,7 +1302,8 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
                         </div>
 
                         <div className="event-form-item-actions">
-                          <button type="button" className="event-form-danger" disabled={busyAction === `delete-lineup-${item.id}`} onClick={() => deleteLineupItem(item.id)} aria-label={`Usuń ${item.title}`}>
+                          <button type="button" className="event-form-icon-button" disabled={!!busyAction} onClick={() => startEditLineupItem(item)} aria-label={`Edytuj ${item.title}`} title="Edytuj"><Pencil size={15}/></button>
+                          <button type="button" className="event-form-danger" disabled={busyAction === `delete-lineup-${item.id}`} onClick={() => deleteLineupItem(item.id)} aria-label={`Usuń ${item.title}`} title="Usuń">
                             {busyAction === `delete-lineup-${item.id}` ? <Loader2 size={15} style={{ animation:"event-form-spin 1s linear infinite" }}/> : <Trash2 size={15}/>}
                           </button>
                         </div>
