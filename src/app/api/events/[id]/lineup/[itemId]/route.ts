@@ -50,6 +50,11 @@ function normalizeTime(value: unknown) {
   return /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(time) ? time : null;
 }
 
+function normalizeProgramDate(value: unknown) {
+  const date = sanitizeText(value, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; itemId: string }> }
@@ -68,6 +73,15 @@ export async function PATCH(
   }
 
   const update: Record<string, unknown> = {};
+
+  if (body.programDate !== undefined) {
+    if (body.programDate === null || body.programDate === "") update.program_date = null;
+    else {
+      const programDate = normalizeProgramDate(body.programDate);
+      if (!programDate) return jsonError("Dzień programu ma nieprawidłowy format.", 400);
+      update.program_date = programDate;
+    }
+  }
 
   if (body.title !== undefined) {
     const title = sanitizeText(body.title, 180);
