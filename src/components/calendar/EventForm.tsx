@@ -184,8 +184,8 @@ function createInitialState(event?: MappedAirshowEvent): EventFormState {
     name: event?.name ?? "",
     shortDescription: event?.shortDescription ?? "",
     longDescription: event?.longDescription ?? "",
-    startDate: toDateTimeLocal(event?.startDate),
-    endDate: toDateTimeLocal(event?.endDate),
+    startDate: toDateTimeLocal(event?.startDate, event?.timezone ?? "Europe/Warsaw"),
+    endDate: toDateTimeLocal(event?.endDate, event?.timezone ?? "Europe/Warsaw"),
     timezone: event?.timezone ?? "Europe/Warsaw",
     country: event?.country ?? "Polska",
     countryCode: event?.countryCode ?? "PL",
@@ -245,14 +245,53 @@ function emptyGalleryDraft(): GalleryDraft {
   };
 }
 
-function toDateTimeLocal(value?: string | null) {
+function toDateTimeLocal(value?: string | null, timeZone = "Europe/Warsaw") {
   if (!value) return "";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
 
-  const timezoneOffset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
+function localDateTimeToISO(value: string, timeZone = "Europe/Warsaw") {
+  if (!value) return null;
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const [, year, month, day, hour, minute] = match;
+  const wallClock = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+
+  const getOffset = (instantMs: number) => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(instantMs));
+    const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+    return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second")) - instantMs;
+  };
+
+  let instant = wallClock - getOffset(wallClock);
+  instant = wallClock - getOffset(instant);
+  return new Date(instant).toISOString();
 }
 
 function slugify(value: string) {
@@ -474,8 +513,8 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
       name: form.name,
       shortDescription: form.shortDescription,
       longDescription: form.longDescription,
-      startDate: form.startDate,
-      endDate: form.endDate || null,
+      startDate: localDateTimeToISO(form.startDate, form.timezone),
+      endDate: form.endDate ? localDateTimeToISO(form.endDate, form.timezone) : null,
       timezone: form.timezone,
       country: form.country,
       countryCode: form.countryCode,
