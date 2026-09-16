@@ -119,43 +119,6 @@ export default async function AirshowEventLayout({
     primaryImageOfPage: event?.cover_image ? { "@type": "ImageObject", url: event.cover_image } : undefined,
   };
 
-  const eventJsonLd = event ? {
-    "@context": "https://schema.org",
-    "@type": "Event",
-    "@id": `${pageUrl}#event`,
-    name: event.name,
-    description: description(event),
-    url: pageUrl,
-    image: event.cover_image ? [event.cover_image] : undefined,
-    startDate: event.start_date,
-    endDate: event.end_date || undefined,
-    eventStatus: `https://schema.org/Event${event.status === "cancelled" ? "Cancelled" : event.status === "postponed" ? "Postponed" : event.status === "rescheduled" ? "Rescheduled" : "Scheduled"}`,
-    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    location: {
-      "@type": "Place",
-      name: event.venue_name || event.city,
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: event.address || undefined,
-        addressLocality: event.city,
-        addressCountry: event.country_code || event.country,
-      },
-      ...(event.official_url ? { sameAs: event.official_url } : {}),
-    },
-    offers: event.admission_type === "free" ? {
-      "@type": "Offer",
-      price: 0,
-      priceCurrency: "CZK",
-      availability: "https://schema.org/InStock",
-      url: pageUrl,
-    } : undefined,
-    organizer: {
-      "@type": "Organization",
-      name: "MGYT AirShow Gallery",
-      url: SITE_URL,
-    },
-  } : null;
-
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageJsonLd).replace(/</g, "\\u003c") }} />
