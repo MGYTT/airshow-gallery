@@ -953,14 +953,41 @@ export default async function AirshowEventPage({
         .airshow-event-fact-icon{width:34px;height:34px;display:grid;place-items:center;flex-shrink:0;border-radius:var(--radius-md);background:var(--color-accent-subtle);color:var(--color-accent)}
         .airshow-event-fact-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint)}
         .airshow-event-fact-value{display:block;margin-top:2px;font-size:var(--text-sm);font-weight:700;color:var(--color-text);line-height:1.35}
-        .airshow-event-program{display:flex;flex-direction:column;gap:var(--space-8)}
-        .airshow-event-program-day{padding:var(--space-5);border:1px solid var(--color-border);border-radius:var(--radius-xl);background:var(--color-surface-offset)}
-        .airshow-event-program-day-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);padding:0 var(--space-1) var(--space-4);border-bottom:1px solid var(--color-divider);margin-bottom:var(--space-4)}
-        .airshow-event-program-kicker{display:block;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent);margin-bottom:var(--space-1)}
+        .airshow-event-program{display:flex;flex-direction:column;gap:var(--space-6)}
+        .airshow-event-program-day{position:relative;overflow:hidden;padding:0;border:1px solid var(--color-border);border-radius:var(--radius-xl);background:var(--color-surface);box-shadow:var(--shadow-sm)}
+        .airshow-event-program-day::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent)}
+        .airshow-event-program-day-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-5) var(--space-6);background:linear-gradient(135deg,var(--color-surface-offset),var(--color-surface));border-bottom:1px solid var(--color-border)}
+        .airshow-event-program-day-head-main{display:flex;align-items:center;gap:var(--space-3)}
+        .airshow-event-program-day-icon{width:42px;height:42px;display:grid;place-items:center;flex:none;border-radius:var(--radius-lg);background:var(--color-accent-subtle);color:var(--color-accent)}
+        .airshow-event-program-kicker{display:block;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent);margin-bottom:2px}
         .airshow-event-program-day-head h3{font-family:var(--font-display);font-size:var(--text-lg);font-weight:900;letter-spacing:-.025em;text-transform:capitalize}
-        .airshow-event-program-count{font-size:var(--text-xs);font-weight:700;color:var(--color-text-faint);white-space:nowrap}
-        .airshow-event-program .airshow-event-lineup{margin:0}
-        @media(max-width:640px){.airshow-event-program-day{padding:var(--space-4)}.airshow-event-program-day-head{align-items:flex-start;flex-direction:column;gap:var(--space-2)}}
+        .airshow-event-program-count{display:inline-flex;align-items:center;min-height:30px;padding:0 var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:800;color:var(--color-text-muted);white-space:nowrap;background:var(--color-surface)}
+        .airshow-event-program .airshow-event-lineup{margin:0;padding:var(--space-3)}
+        .airshow-event-lineup-item{position:relative;display:grid;grid-template-columns:112px minmax(0,1fr);gap:var(--space-4);padding:var(--space-5);border:1px solid transparent;border-radius:var(--radius-lg);background:var(--color-surface);transition:background var(--transition),border-color var(--transition),transform var(--transition)}
+        .airshow-event-lineup-item:hover{background:var(--color-surface-offset);border-color:var(--color-border);transform:translateX(2px)}
+        .airshow-event-lineup-time{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding-right:var(--space-4);border-right:1px solid var(--color-divider);font-family:var(--font-display);font-size:var(--text-base);font-weight:900}
+        .airshow-event-lineup-time small{font-family:inherit;font-size:10px;color:var(--color-text-faint);font-weight:700}
+        .airshow-event-lineup-body{min-width:0}
+        .airshow-event-lineup-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-2)}
+        .airshow-event-lineup-status{padding:3px 8px;border-radius:var(--radius-full);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
+        .airshow-event-lineup-category{font-size:10px;color:var(--color-text-faint);text-align:right}
+        .airshow-event-lineup-name{font-family:var(--font-display);font-size:var(--text-base);font-weight:850;letter-spacing:-.02em}
+        .airshow-event-lineup-description{margin-top:var(--space-2);font-size:var(--text-xs);line-height:1.65;color:var(--color-text-muted)}
+        .airshow-event-lineup-meta{display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-3);font-size:var(--text-xs);color:var(--color-text-faint)}
+        .airshow-event-program-day-note{padding:0 var(--space-6) var(--space-4);font-size:10px;color:var(--color-text-faint)}
+        @media(max-width:640px){
+          .airshow-event-program{gap:var(--space-4)}
+          .airshow-event-program-day{border-radius:var(--radius-lg)}
+          .airshow-event-program-day-head{padding:var(--space-4);align-items:flex-start}
+          .airshow-event-program-day-icon{width:36px;height:36px}
+          .airshow-event-program-day-head h3{font-size:var(--text-base)}
+          .airshow-event-program-count{font-size:10px;min-height:28px}
+          .airshow-event-program .airshow-event-lineup{padding:var(--space-2)}
+          .airshow-event-lineup-item{grid-template-columns:76px minmax(0,1fr);gap:var(--space-3);padding:var(--space-4)}
+          .airshow-event-lineup-time{font-size:var(--text-sm);padding-right:var(--space-3)}
+          .airshow-event-lineup-top{align-items:flex-start;flex-direction:column;gap:var(--space-2)}
+          .airshow-event-lineup-category{text-align:left}
+        }
         .airshow-event-lineup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}
         .airshow-event-lineup-item{padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface)}
         .airshow-event-lineup-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3)}
@@ -1254,9 +1281,12 @@ export default async function AirshowEventPage({
                     return (
                       <section key={day} className="airshow-event-program-day">
                         <div className="airshow-event-program-day-head">
-                          <div>
-                            <span className="airshow-event-program-kicker">Program dnia</span>
-                            <h3>{dayLabel}</h3>
+                          <div className="airshow-event-program-day-head-main">
+                            <div className="airshow-event-program-day-icon" aria-hidden="true"><CalendarDays size={19}/></div>
+                            <div>
+                              <span className="airshow-event-program-kicker">Program dnia</span>
+                              <h3>{dayLabel}</h3>
+                            </div>
                           </div>
                           <span className="airshow-event-program-count">
                             {items.length} {items.length === 1 ? "pozycja" : items.length < 5 ? "pozycje" : "pozycji"}
@@ -1266,6 +1296,11 @@ export default async function AirshowEventPage({
                         <div className="airshow-event-lineup">
                           {items.map((item) => (
                             <article key={item.id} className="airshow-event-lineup-item">
+                              <div className="airshow-event-lineup-time">
+                                {item.startTime ? item.startTime.slice(0, 5) : "—"}
+                                {item.endTime && <small>do {item.endTime.slice(0, 5)}</small>}
+                              </div>
+                              <div className="airshow-event-lineup-body">
                               <div className="airshow-event-lineup-top">
                                 <span className={`airshow-event-lineup-status lineup-status--${item.status}`}>
                                   {LINEUP_STATUS_LABELS[item.status]}
@@ -1300,6 +1335,7 @@ export default async function AirshowEventPage({
                                     Źródło ↗
                                   </a>
                                 )}
+                              </div>
                               </div>
                             </article>
                           ))}
