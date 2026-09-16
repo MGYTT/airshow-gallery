@@ -88,6 +88,7 @@ interface EventFormState {
 }
 
 interface LineupDraft {
+  programDate: string;
   title: string;
   description: string;
   category: AirshowLineupCategory;
@@ -215,8 +216,9 @@ function createInitialState(event?: MappedAirshowEvent): EventFormState {
   };
 }
 
-function emptyLineupDraft(): LineupDraft {
+function emptyLineupDraft(programDate = ""): LineupDraft {
   return {
+    programDate,
     title: "",
     description: "",
     category: "flying_display",
@@ -330,6 +332,26 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
   const publicUrl = form.slug ? `/airshow/${form.slug}` : "/airshow/twoj-slug";
+
+  const programDays = useMemo(() => {
+    const startValue = form.startDate.slice(0, 10);
+    const endValue = (form.endDate || form.startDate).slice(0, 10);
+    if (!startValue) return [];
+    const from = new Date(startValue + "T12:00:00");
+    const to = new Date(endValue + "T12:00:00");
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to < from) return [];
+    const days: string[] = [];
+    for (const day = new Date(from); day <= to && days.length < 31; day.setDate(day.getDate() + 1)) {
+      days.push(day.toISOString().slice(0, 10));
+    }
+    return days;
+  }, [form.startDate, form.endDate]);
+
+  function formatProgramDate(value: string) {
+    const date = new Date(value + "T12:00:00");
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat("pl-PL", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(date);
+  }
 
   const remainingGalleryOptions = useMemo(() => {
     const linkedShowIds = new Set(galleryLinks.map((link) => link.showId));
@@ -542,6 +564,11 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
       return;
     }
 
+    if (!lineupDraft.programDate) {
+      setError("Wybierz dzień programu.");
+      return;
+    }
+
     if (!lineupDraft.title.trim()) {
       setError("Podaj nazwę pozycji programu.");
       return;
@@ -568,7 +595,7 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
       }
 
       setLineup((previous) => [...previous, payload as MappedAirshowEventLineup]);
-      setLineupDraft(emptyLineupDraft());
+      setLineupDraft(emptyLineupDraft(lineupDraft.programDate));
       setNotice("Dodano pozycję programu.");
     } catch (caughtError) {
       setError(getErrorMessage(caughtError));
@@ -831,13 +858,14 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
         .event-form-danger:hover{background:rgba(220,38,38,.14)}
         .event-form-add-box{padding:var(--space-5);border:1px dashed var(--color-border-strong);border-radius:var(--radius-xl);background:color-mix(in srgb,var(--color-surface-offset) 60%,transparent)}
         .event-form-compact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}
+        .event-form-compact-grid--three{display:grid;grid-template-columns:1.1fr 1.5fr 1fr;gap:var(--space-3)}
         .event-form-url-preview{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-4);background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-muted);overflow:hidden}
         .event-form-url-preview span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .event-form-footer{position:sticky;bottom:var(--space-4);z-index:5;display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-4);background:color-mix(in srgb,var(--color-bg) 92%,transparent);backdrop-filter:blur(12px);border:1px solid var(--color-border);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);margin-top:var(--space-6)}
         .event-form-empty{padding:var(--space-12) var(--space-6);text-align:center;border:1px dashed var(--color-border-strong);border-radius:var(--radius-xl);color:var(--color-text-muted)}
         @media(max-width:800px){
           .event-form-grid,.event-form-grid--three{grid-template-columns:1fr}
-          .event-form-compact-grid{grid-template-columns:1fr}
+          .event-form-compact-grid,.event-form-compact-grid--three{grid-template-columns:1fr}
           .event-form-section{padding:var(--space-5)}
           .event-form-footer{position:static;align-items:stretch;flex-direction:column}
           .event-form-footer > div{width:100%}
@@ -1204,6 +1232,7 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
                           )}
 
                           <div style={{ display:"flex", gap:"var(--space-3)", flexWrap:"wrap", marginTop:"var(--space-3)", fontSize:"var(--text-xs)", color:"var(--color-text-faint)" }}>
+                            {item.programDate && <span style={{ color:"var(--color-accent)", fontWeight:700 }}>{formatProgramDate(item.programDate)}</span>}
                             {item.country && <span>{item.country}</span>}
                             {item.startTime && <span>{item.startTime.slice(0, 5)}{item.endTime ? `–${item.endTime.slice(0, 5)}` : ""}</span>}
                             {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color:"var(--color-accent)", fontWeight:700 }}>Źródło ↗</a>}
@@ -1228,7 +1257,16 @@ export default function EventForm({ mode, initialEvent }: EventFormProps) {
               )}
 
               <div className="event-form-add-box">
-                <div className="event-form-compact-grid">
+                <div className="event-form-compact-grid--three">
+                  <div className="event-form-field">
+                    <label htmlFor="lineup-program-date">Dzień programu *</label>
+                    <select id="lineup-program-date" className="event-form-select" value={lineupDraft.programDate} onChange={(event) => setLineupDraft((previous) => ({ ...previous, programDate: event.target.value }))} disabled={!isEdit}>
+                      <option value="">Wybierz dzień</option>
+                      {programDays.map((day) => <option key={day} value={day}>{formatProgramDate(day)}</option>)}
+                    </select>
+                    <small>Konkretny dzień wydarzenia, którego dotyczy ta pozycja.</small>
+                  </div>
+
                   <div className="event-form-field">
                     <label htmlFor="lineup-title">Nazwa atrakcji / maszyny *</label>
                     <input id="lineup-title" className="input" value={lineupDraft.title} onChange={(event) => setLineupDraft((previous) => ({ ...previous, title:event.target.value }))} placeholder="np. F-16 Fighting Falcon" disabled={!isEdit} />
