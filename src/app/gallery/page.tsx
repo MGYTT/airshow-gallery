@@ -64,7 +64,6 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
   const closeRef = useRef<HTMLButtonElement>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [chromeVisible, setChromeVisible] = useState(true);
-  const [fullQuality, setFullQuality] = useState(false);
   const isFavorite = photo ? favorites.has(photo.id) : false;
 
   const sharePhoto = useCallback(async () => {
@@ -139,7 +138,7 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
     if(zoom>1)resetZoom(); else {setZoom(2.5);setPan({x:0,y:0});}
   }
 
-  useEffect(()=>{ resetZoom(); setInfoOpen(false); setChromeVisible(true); setFullQuality(false); },[photo?.id]);
+  useEffect(()=>{ resetZoom(); setInfoOpen(false); setChromeVisible(true); },[photo?.id]);
 
   if (!photo) return null;
 
@@ -158,14 +157,14 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
         .lb-counter{position:fixed;top:var(--space-5);left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:var(--text-xs);font-weight:600;padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);white-space:nowrap;font-variant-numeric:tabular-nums}
         .lb-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;padding:56px 0 112px}
         .lb-img{display:block;max-width:min(96vw,1800px);max-height:calc(100dvh - 148px);width:auto;height:auto;border-radius:var(--radius-xl);box-shadow:0 32px 80px rgba(0,0,0,.6);object-fit:contain;will-change:transform;transition:transform .14s cubic-bezier(.2,.8,.2,1),opacity .18s ease;user-select:none;-webkit-user-select:none}
-        .lb-bar{position:fixed;bottom:0;left:0;right:0;padding:var(--space-4) var(--space-8);background:linear-gradient(to top,rgba(0,0,0,.92),rgba(0,0,0,.42),transparent);display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap}
+        .lb-bar{position:fixed;bottom:0;left:0;right:0;padding:28px 32px 20px;background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.32),transparent);display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
         .lb-hint{position:fixed;bottom:var(--space-16);left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.25);letter-spacing:.06em;text-transform:uppercase;display:none}
-        .lb-actions{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;justify-content:flex-end}
-        .lb-action{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);font-weight:650;color:rgba(255,255,255,.82);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);cursor:pointer;backdrop-filter:blur(6px)}
+        .lb-actions{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+        .lb-action{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:12px;font-weight:650;color:rgba(255,255,255,.86);background:rgba(20,20,22,.62);border:1px solid rgba(255,255,255,.12);min-height:42px;padding:0 13px;border-radius:999px;cursor:pointer;backdrop-filter:blur(14px)}
         .lb-action:hover{background:rgba(255,255,255,.16);color:#fff}.lb-action.favorite{color:#fff;background:rgba(220,38,38,.24);border-color:rgba(248,113,113,.35)}
         .lb-info-panel{position:fixed;right:var(--space-5);bottom:84px;width:min(360px,calc(100vw - 32px));padding:var(--space-4);border-radius:var(--radius-xl);background:rgba(15,15,18,.92);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(16px);color:#fff;box-shadow:0 24px 70px rgba(0,0,0,.45)}
         @media(hover:none){.lb-hint{display:block}.lb-prev,.lb-next{opacity:.35}}
-        @media(max-width:640px){.lb{overscroll-behavior:none}.lb-stage{inset:0;padding:48px 0 112px}.lb-img{max-width:100vw;max-height:calc(100dvh - 150px);border-radius:0}.lb-prev,.lb-next{display:none}.lb-close{top:12px;right:12px}.lb-counter{top:16px}.lb-bar{padding:var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));display:block;background:linear-gradient(to top,rgba(0,0,0,.96),rgba(0,0,0,.58),transparent)}.lb-actions{margin-top:var(--space-3);justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.lb-action{min-height:40px;white-space:nowrap}.lb-info-panel{left:16px;right:16px;bottom:120px;width:auto}.lb-hint{bottom:112px}}
+        @media(max-width:640px){.lb{overscroll-behavior:none}.lb-stage{inset:0;padding:46px 0 96px}.lb-img{max-width:100vw;max-height:calc(100dvh - 126px);border-radius:0}.lb-prev,.lb-next{display:none}.lb-close{top:max(10px,env(safe-area-inset-top));right:12px;width:42px;height:42px}.lb-counter{top:max(14px,env(safe-area-inset-top));font-size:11px;padding:7px 11px}.lb-bar{padding:38px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,.28),transparent);align-items:center}.lb-bar>div:first-child{min-width:0;flex:1}.lb-bar>div:first-child p:last-child{display:none}.lb-actions{margin:0;gap:6px;flex-shrink:0}.lb-action{width:42px;height:42px;min-height:42px;padding:0;border-radius:999px}.lb-action span,.lb-action-label{display:none}.lb-info-panel{left:12px;right:12px;bottom:82px;width:auto;max-height:45dvh;overflow:auto}.lb-hint{bottom:82px}.lb-show-link{display:none}}
       `}</style>
       <div
         className="lb"
@@ -193,12 +192,12 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
             <p style={{fontSize:"var(--text-xs)",color:"rgba(255,255,255,.55)"}}>{photo.alt}</p>
           </div>
           <div className="lb-actions">
-            <button className={`lb-action ${isFavorite?"favorite":""}`} onClick={()=>onToggleFavorite(photo.id)} aria-label={isFavorite?"Usuń z ulubionych":"Dodaj do ulubionych"}><Heart size={14} fill={isFavorite?"currentColor":"none"}/>{isFavorite?"Ulubione":"Dodaj"}</button>
-            <button className="lb-action" onClick={()=>{setFullQuality(true);if(zoom===1)setZoom(2)}} title="Pokaż szczegóły oryginalnego pliku"><Maximize2 size={14}/>{fullQuality?"Pełna jakość":"Jakość 1:1"}</button>
-            <button className="lb-action" onClick={sharePhoto}><Share2 size={14}/>Udostępnij</button>
-            <button className="lb-action" onClick={()=>setInfoOpen(v=>!v)} aria-expanded={infoOpen}><Info size={14}/>Informacje</button>
+            <button className={`lb-action ${isFavorite?"favorite":""}`} onClick={()=>onToggleFavorite(photo.id)} aria-label={isFavorite?"Usuń z ulubionych":"Dodaj do ulubionych"}><Heart size={15} fill={isFavorite?"currentColor":"none"}/><span className="lb-action-label">{isFavorite?"Ulubione":"Dodaj"}</span></button>
+            <button className="lb-action" onClick={()=>{if(zoom>1)resetZoom();else{setZoom(2);setPan({x:0,y:0})}}} title={zoom>1?"Wróć do dopasowania":"Pokaż w skali 1:1"} aria-pressed={zoom>1}><Maximize2 size={15}/><span className="lb-action-label">{zoom>1?"Dopasuj":"1:1"}</span></button>
+            <button className="lb-action" onClick={sharePhoto} aria-label="Udostępnij"><Share2 size={15}/><span className="lb-action-label">Udostępnij</span></button>
+            <button className="lb-action" onClick={()=>setInfoOpen(v=>!v)} aria-expanded={infoOpen} aria-label="Informacje"><Info size={15}/><span className="lb-action-label">Info</span></button>
             {show && (
-              <Link href={`/pokaz/${show.id}`} className="lb-action" style={{textDecoration:"none"}}><Images size={12}/>{show.name}</Link>
+              <Link href={`/pokaz/${show.id}`} className="lb-action lb-show-link" style={{textDecoration:"none"}}><Images size={14}/><span className="lb-action-label">{show.name}</span></Link>
             )}
           </div>
         </div>
