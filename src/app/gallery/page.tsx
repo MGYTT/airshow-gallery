@@ -312,6 +312,7 @@ function SelectRow({ icon: Icon, label, value, onChange, options }: {
 function GalleryContent() {
   const searchParams = useSearchParams();
   const initialShow  = searchParams.get("show") ?? "all";
+  const initialPhoto = searchParams.get("photo");
 
   const [shows, setShows]     = useState<AirShow[]>([]);
   const [photos, setPhotos]   = useState<Photo[]>([]);
@@ -329,6 +330,7 @@ function GalleryContent() {
   const [sort, setSort]                   = useState<SortKey>("newest");
   const [sheetOpen, setSheetOpen]         = useState(false);
   const [showsSheetOpen, setShowsSheetOpen] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -402,8 +404,9 @@ function GalleryContent() {
       list = list.filter(p=>ids.has(p.showId));
     }
     if (filterTag!=="all") list = list.filter(p=>p.tags.includes(filterTag));
+    if (favoritesOnly) list = list.filter(p=>favorites.has(p.id));
     return list;
-  }, [photos, activeShow, debouncedSearch, filterYear, filterCountry, filterTag, shows]);
+  }, [photos, activeShow, debouncedSearch, filterYear, filterCountry, filterTag, shows, favoritesOnly, favorites]);
 
   // Sortowane pokazy
   const sortedShows = useMemo<AirShow[]>(()=>{
@@ -429,6 +432,12 @@ function GalleryContent() {
   const closeLb = useCallback(()=>setLbIndex(null),[]);
   const prevLb  = useCallback(()=>setLbIndex(p=>p===null||total===0?null:(p-1+total)%total),[total]);
   const nextLb  = useCallback(()=>setLbIndex(p=>p===null||total===0?null:(p+1)%total),[total]);
+
+  useEffect(() => {
+    if (!initialPhoto || loading || photos.length===0) return;
+    const i = filteredPhotos.findIndex(p=>p.id===initialPhoto);
+    if (i>=0) setLbIndex(i);
+  }, [initialPhoto, loading, photos.length, filteredPhotos]);
 
   // Zamknij lightbox jeśli lista się skróciła (np. po zmianie filtra)
   useEffect(() => {
@@ -642,6 +651,13 @@ function GalleryContent() {
               )}
             </div>
           )}
+
+          <div style={{display:"flex",alignItems:"center",gap:"var(--space-2)",paddingBottom:"var(--space-3)"}}>
+            <button className={`icon-action ${favoritesOnly?"active":""}`} onClick={()=>setFavoritesOnly(v=>!v)} aria-pressed={favoritesOnly}>
+              <Heart size={13} fill={favoritesOnly?"currentColor":"none"}/> Ulubione {favorites.size>0&&`(${favorites.size})`}
+            </button>
+            {favoritesOnly&&<span style={{fontSize:"var(--text-xs)",color:"var(--color-text-faint)"}}>Pokazujesz tylko zapisane zdjęcia</span>}
+          </div>
 
           {/* ── MOBILE toolbar ── */}
           <div className="g-mobile-bar">
