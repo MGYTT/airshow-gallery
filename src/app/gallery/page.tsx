@@ -4,7 +4,7 @@ import {
   useState, useMemo, useCallback,
   useEffect, useRef, Suspense,
 } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import ShowCard from "@/components/ShowCard";
@@ -14,6 +14,7 @@ import {
   Images, Plane, MapPin, Calendar,
   Loader2, Search, ArrowUpDown,
   SlidersHorizontal, Check, AlertTriangle, RotateCw,
+  Heart, Share2, Info,
 } from "lucide-react";
 
 // ── Typy ─────────────────────────────────────────────────────
@@ -43,16 +44,30 @@ function useDebounced<T>(value: T, delay = 250): T {
 // ─────────────────────────────────────────────────────────────
 // LIGHTBOX z swipe + focus trap
 // ─────────────────────────────────────────────────────────────
-function Lightbox({ list, index, onClose, onPrev, onNext, shows }: {
+function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onToggleFavorite }: {
   list: Photo[]; index: number;
   onClose: () => void; onPrev: () => void; onNext: () => void;
   shows: AirShow[];
+  favorites: Set<string>; onToggleFavorite: (id: string) => void;
 }) {
   const photo   = list[index];
   const show    = shows.find(s => s.id === photo?.showId);
   const touchX  = useRef<number | null>(null);
   const touchY  = useRef<number | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const isFavorite = photo ? favorites.has(photo.id) : false;
+
+  const sharePhoto = useCallback(async () => {
+    if (!photo) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("photo", photo.id);
+    const payload = { title: photo.aircraft || "AirShow Gallery", text: photo.alt || photo.aircraft, url: url.toString() };
+    try {
+      if (navigator.share) await navigator.share(payload);
+      else await navigator.clipboard.writeText(url.toString());
+    } catch { /* anulowane udostępnianie */ }
+  }, [photo]);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -110,8 +125,12 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows }: {
         .lb-img{display:block;max-width:min(90vw,1200px);max-height:82dvh;width:auto;height:auto;border-radius:var(--radius-xl);box-shadow:0 32px 80px rgba(0,0,0,.6);object-fit:contain}
         .lb-bar{position:fixed;bottom:0;left:0;right:0;padding:var(--space-4) var(--space-8);background:linear-gradient(to top,rgba(0,0,0,.85),transparent);display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap}
         .lb-hint{position:fixed;bottom:var(--space-16);left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.25);letter-spacing:.06em;text-transform:uppercase;display:none}
+        .lb-actions{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;justify-content:flex-end}
+        .lb-action{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);font-weight:650;color:rgba(255,255,255,.82);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);cursor:pointer;backdrop-filter:blur(6px)}
+        .lb-action:hover{background:rgba(255,255,255,.16);color:#fff}.lb-action.favorite{color:#fff;background:rgba(220,38,38,.24);border-color:rgba(248,113,113,.35)}
+        .lb-info-panel{position:fixed;right:var(--space-5);bottom:84px;width:min(360px,calc(100vw - 32px));padding:var(--space-4);border-radius:var(--radius-xl);background:rgba(15,15,18,.92);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(16px);color:#fff;box-shadow:0 24px 70px rgba(0,0,0,.45)}
         @media(hover:none){.lb-hint{display:block}.lb-prev,.lb-next{opacity:.35}}
-        @media(max-width:640px){.lb-prev{left:var(--space-2)}.lb-next{right:var(--space-2)}.lb-bar{padding:var(--space-3) var(--space-4)}}
+        @media(max-width:640px){.lb{align-items:flex-start;padding-top:64px}.lb-img{max-width:100vw;max-height:calc(100dvh - 190px);border-radius:0}.lb-prev,.lb-next{display:none}.lb-close{top:12px;right:12px}.lb-counter{top:16px}.lb-bar{padding:var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));display:block;background:linear-gradient(to top,rgba(0,0,0,.96),rgba(0,0,0,.58),transparent)}.lb-actions{margin-top:var(--space-3);justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.lb-action{min-height:40px;white-space:nowrap}.lb-info-panel{left:16px;right:16px;bottom:120px;width:auto}.lb-hint{bottom:112px}}
       `}</style>
       <div
         className="lb"
@@ -133,12 +152,16 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows }: {
             <p style={{fontSize:"var(--text-sm)",fontWeight:700,color:"#fff",marginBottom:4}}>{photo.aircraft}</p>
             <p style={{fontSize:"var(--text-xs)",color:"rgba(255,255,255,.55)"}}>{photo.alt}</p>
           </div>
-          {show && (
-            <Link href={`/pokaz/${show.id}`} style={{display:"inline-flex",alignItems:"center",gap:"var(--space-2)",fontSize:"var(--text-xs)",fontWeight:600,color:"rgba(255,255,255,.8)",background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.15)",padding:"var(--space-2) var(--space-3)",borderRadius:"var(--radius-md)",textDecoration:"none",flexShrink:0,backdropFilter:"blur(6px)"}}>
-              <Images size={12}/>{show.name}
-            </Link>
-          )}
+          <div className="lb-actions">
+            <button className={`lb-action ${isFavorite?"favorite":""}`} onClick={()=>onToggleFavorite(photo.id)} aria-label={isFavorite?"Usuń z ulubionych":"Dodaj do ulubionych"}><Heart size={14} fill={isFavorite?"currentColor":"none"}/>{isFavorite?"Ulubione":"Dodaj"}</button>
+            <button className="lb-action" onClick={sharePhoto}><Share2 size={14}/>Udostępnij</button>
+            <button className="lb-action" onClick={()=>setInfoOpen(v=>!v)} aria-expanded={infoOpen}><Info size={14}/>Informacje</button>
+            {show && (
+              <Link href={`/pokaz/${show.id}`} className="lb-action" style={{textDecoration:"none"}}><Images size={12}/>{show.name}</Link>
+            )}
+          </div>
         </div>
+        {infoOpen&&<div className="lb-info-panel" onClick={e=>e.stopPropagation()}><p style={{fontWeight:800,marginBottom:8}}>{photo.aircraft||"Zdjęcie lotnicze"}</p><p style={{fontSize:"var(--text-xs)",color:"rgba(255,255,255,.65)",lineHeight:1.55}}>{photo.alt||"Brak dodatkowego opisu."}</p>{photo.tags.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:12}}>{photo.tags.map(tag=><span key={tag} style={{fontSize:10,padding:"4px 7px",borderRadius:999,background:"rgba(255,255,255,.08)"}}>#{tag}</span>)}</div>}</div>}
       </div>
     </>
   );
@@ -288,7 +311,9 @@ function SelectRow({ icon: Icon, label, value, onChange, options }: {
 // ─────────────────────────────────────────────────────────────
 function GalleryContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialShow  = searchParams.get("show") ?? "all";
+  const initialPhoto = searchParams.get("photo");
 
   const [shows, setShows]     = useState<AirShow[]>([]);
   const [photos, setPhotos]   = useState<Photo[]>([]);
@@ -299,13 +324,26 @@ function GalleryContent() {
   const [activeShow, setActiveShow]       = useState(initialShow);
   const [view, setView]                   = useState<ViewMode>("grid");
   const [lbIndex, setLbIndex]             = useState<number | null>(null);
-  const [search, setSearch]               = useState("");
-  const [filterYear, setFilterYear]       = useState("all");
-  const [filterCountry, setFilterCountry] = useState("all");
-  const [filterTag, setFilterTag]         = useState("all");
-  const [sort, setSort]                   = useState<SortKey>("newest");
+  const [search, setSearch]               = useState(searchParams.get("q") ?? "");
+  const [filterYear, setFilterYear]       = useState(searchParams.get("year") ?? "all");
+  const [filterCountry, setFilterCountry] = useState(searchParams.get("country") ?? "all");
+  const [filterTag, setFilterTag]         = useState(searchParams.get("tag") ?? "all");
+  const [sort, setSort]                   = useState<SortKey>((searchParams.get("sort") as SortKey) ?? "newest");
   const [sheetOpen, setSheetOpen]         = useState(false);
   const [showsSheetOpen, setShowsSheetOpen] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(searchParams.get("favorites")==="1");
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try { setFavorites(new Set(JSON.parse(localStorage.getItem("airshow-favorites") ?? "[]") as string[])); } catch { /* ignore invalid local data */ }
+  }, []);
+  const toggleFavorite = useCallback((id: string) => {
+    setFavorites(prev => {
+      const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id);
+      localStorage.setItem("airshow-favorites", JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
 
   const debouncedSearch = useDebounced(search, 200);
 
@@ -367,8 +405,23 @@ function GalleryContent() {
       list = list.filter(p=>ids.has(p.showId));
     }
     if (filterTag!=="all") list = list.filter(p=>p.tags.includes(filterTag));
+    if (favoritesOnly) list = list.filter(p=>favorites.has(p.id));
     return list;
-  }, [photos, activeShow, debouncedSearch, filterYear, filterCountry, filterTag, shows]);
+  }, [photos, activeShow, debouncedSearch, filterYear, filterCountry, filterTag, shows, favoritesOnly, favorites]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activeShow!=="all") params.set("show", activeShow);
+    if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
+    if (filterYear!=="all") params.set("year", filterYear);
+    if (filterCountry!=="all") params.set("country", filterCountry);
+    if (filterTag!=="all") params.set("tag", filterTag);
+    if (sort!=="newest") params.set("sort", sort);
+    if (favoritesOnly) params.set("favorites", "1");
+    if (lbIndex!==null && filteredPhotos[lbIndex]) params.set("photo", filteredPhotos[lbIndex].id);
+    const query = params.toString();
+    router.replace(query ? `/gallery?${query}` : "/gallery", { scroll: false });
+  }, [activeShow, debouncedSearch, filterYear, filterCountry, filterTag, sort, favoritesOnly, lbIndex, filteredPhotos, router]);
 
   // Sortowane pokazy
   const sortedShows = useMemo<AirShow[]>(()=>{
@@ -394,6 +447,12 @@ function GalleryContent() {
   const closeLb = useCallback(()=>setLbIndex(null),[]);
   const prevLb  = useCallback(()=>setLbIndex(p=>p===null||total===0?null:(p-1+total)%total),[total]);
   const nextLb  = useCallback(()=>setLbIndex(p=>p===null||total===0?null:(p+1)%total),[total]);
+
+  useEffect(() => {
+    if (!initialPhoto || loading || photos.length===0) return;
+    const i = filteredPhotos.findIndex(p=>p.id===initialPhoto);
+    if (i>=0) setLbIndex(i);
+  }, [initialPhoto, loading, photos.length, filteredPhotos]);
 
   // Zamknij lightbox jeśli lista się skróciła (np. po zmianie filtra)
   useEffect(() => {
@@ -608,6 +667,13 @@ function GalleryContent() {
             </div>
           )}
 
+          <div style={{display:"flex",alignItems:"center",gap:"var(--space-2)",paddingBottom:"var(--space-3)"}}>
+            <button className={`icon-action ${favoritesOnly?"active":""}`} onClick={()=>setFavoritesOnly(v=>!v)} aria-pressed={favoritesOnly}>
+              <Heart size={13} fill={favoritesOnly?"currentColor":"none"}/> Ulubione {favorites.size>0&&`(${favorites.size})`}
+            </button>
+            {favoritesOnly&&<span style={{fontSize:"var(--text-xs)",color:"var(--color-text-faint)"}}>Pokazujesz tylko zapisane zdjęcia</span>}
+          </div>
+
           {/* ── MOBILE toolbar ── */}
           <div className="g-mobile-bar">
             <div style={{position:"relative",flex:1}}>
@@ -684,7 +750,7 @@ function GalleryContent() {
 
       {/* ── LIGHTBOX ── */}
       {lbIndex!==null&&total>0&&(
-        <Lightbox list={filteredPhotos} index={lbIndex} onClose={closeLb} onPrev={prevLb} onNext={nextLb} shows={shows}/>
+        <Lightbox list={filteredPhotos} index={lbIndex} onClose={closeLb} onPrev={prevLb} onNext={nextLb} shows={shows} favorites={favorites} onToggleFavorite={toggleFavorite}/>
       )}
 
       {/* ── BOTTOM SHEET: Filtry (mobile) ── */}
