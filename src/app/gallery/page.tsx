@@ -347,20 +347,6 @@ function GalleryContent() {
 
   const debouncedSearch = useDebounced(search, 200);
 
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (activeShow!=="all") params.set("show", activeShow);
-    if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
-    if (filterYear!=="all") params.set("year", filterYear);
-    if (filterCountry!=="all") params.set("country", filterCountry);
-    if (filterTag!=="all") params.set("tag", filterTag);
-    if (sort!=="newest") params.set("sort", sort);
-    if (favoritesOnly) params.set("favorites", "1");
-    if (lbIndex!==null && filteredPhotos[lbIndex]) params.set("photo", filteredPhotos[lbIndex].id);
-    const query = params.toString();
-    router.replace(query ? `/gallery?${query}` : "/gallery", { scroll: false });
-  }, [activeShow, debouncedSearch, filterYear, filterCountry, filterTag, sort, favoritesOnly, lbIndex, filteredPhotos, router]);
-
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -422,6 +408,20 @@ function GalleryContent() {
     if (favoritesOnly) list = list.filter(p=>favorites.has(p.id));
     return list;
   }, [photos, activeShow, debouncedSearch, filterYear, filterCountry, filterTag, shows, favoritesOnly, favorites]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activeShow!=="all") params.set("show", activeShow);
+    if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
+    if (filterYear!=="all") params.set("year", filterYear);
+    if (filterCountry!=="all") params.set("country", filterCountry);
+    if (filterTag!=="all") params.set("tag", filterTag);
+    if (sort!=="newest") params.set("sort", sort);
+    if (favoritesOnly) params.set("favorites", "1");
+    if (lbIndex!==null && filteredPhotos[lbIndex]) params.set("photo", filteredPhotos[lbIndex].id);
+    const query = params.toString();
+    router.replace(query ? `/gallery?${query}` : "/gallery", { scroll: false });
+  }, [activeShow, debouncedSearch, filterYear, filterCountry, filterTag, sort, favoritesOnly, lbIndex, filteredPhotos, router]);
 
   // Sortowane pokazy
   const sortedShows = useMemo<AirShow[]>(()=>{
