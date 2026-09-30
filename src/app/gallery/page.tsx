@@ -54,6 +54,13 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
   const show    = shows.find(s => s.id === photo?.showId);
   const touchX  = useRef<number | null>(null);
   const touchY  = useRef<number | null>(null);
+  const touchAt = useRef(0);
+  const [dragX, setDragX] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({x:0,y:0});
+  const pinchDistance = useRef<number | null>(null);
+  const pinchZoom = useRef(1);
+  const panStart = useRef<{x:number;y:number;px:number;py:number} | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const isFavorite = photo ? favorites.has(photo.id) : false;
@@ -94,24 +101,50 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
     });
   }, [index, list]);
 
+  const distance = (a: React.Touch, b: React.Touch) => Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+  function resetZoom(){ setZoom(1); setPan({x:0,y:0}); pinchDistance.current=null; panStart.current=null; }
   function handleTouchStart(e: React.TouchEvent) {
-    touchX.current = e.touches[0].clientX;
-    touchY.current = e.touches[0].clientY;
+    if(e.touches.length===2){
+      pinchDistance.current=distance(e.touches[0],e.touches[1]); pinchZoom.current=zoom; setDragX(0); return;
+    }
+    touchX.current=e.touches[0].clientX; touchY.current=e.touches[0].clientY; touchAt.current=performance.now(); setDragX(0);
+    if(zoom>1) panStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY,px:pan.x,py:pan.y};
+  }
+  function handleTouchMove(e: React.TouchEvent) {
+    if(e.touches.length===2 && pinchDistance.current){
+      const next=Math.max(1,Math.min(4,pinchZoom.current*(distance(e.touches[0],e.touches[1])/pinchDistance.current)));
+      setZoom(next); if(next===1)setPan({x:0,y:0}); return;
+    }
+    if(zoom>1 && panStart.current){
+      setPan({x:panStart.current.px+e.touches[0].clientX-panStart.current.x,y:panStart.current.py+e.touches[0].clientY-panStart.current.y}); return;
+    }
+    if (touchX.current === null || touchY.current === null) return;
+    const dx=e.touches[0].clientX-touchX.current, dy=e.touches[0].clientY-touchY.current;
+    if(Math.abs(dx)>Math.abs(dy)*1.15)setDragX(Math.max(-110,Math.min(110,dx)));
   }
   function handleTouchEnd(e: React.TouchEvent) {
-    if (touchX.current === null || touchY.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchX.current;
-    const dy = e.changedTouches[0].clientY - touchY.current;
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) dx < 0 ? onNext() : onPrev();
-    touchX.current = null; touchY.current = null;
+    if(e.touches.length>0){ if(e.touches.length<2)pinchDistance.current=null; return; }
+    pinchDistance.current=null; panStart.current=null;
+    if(zoom>1){ touchX.current=null; touchY.current=null; setDragX(0); return; }
+    if(touchX.current===null||touchY.current===null)return;
+    const dx=e.changedTouches[0].clientX-touchX.current,dy=e.changedTouches[0].clientY-touchY.current;
+    const velocity=Math.abs(dx)/Math.max(1,performance.now()-touchAt.current);
+    if(Math.abs(dx)>Math.abs(dy)*1.15&&(Math.abs(dx)>56||velocity>.45))dx<0?onNext():onPrev();
+    setDragX(0);touchX.current=null;touchY.current=null;
   }
+  function handleDoubleClick(e: React.MouseEvent){
+    e.stopPropagation();
+    if(zoom>1)resetZoom(); else {setZoom(2.5);setPan({x:0,y:0});}
+  }
+
+  useEffect(()=>{ resetZoom(); setInfoOpen(false); },[photo?.id]);
 
   if (!photo) return null;
 
   return (
     <>
       <style>{`
-        .lb{position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:9999;display:flex;align-items:center;justify-content:center;animation:lbIn .18s ease}
+        .lb{position:fixed;inset:0;background:rgba(0,0,0,.98);z-index:9999;display:grid;place-items:center;overflow:hidden;animation:lbIn .18s ease}
         @keyframes lbIn{from{opacity:0}to{opacity:1}}
         .lb-btn{position:fixed;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
         .lb-btn:hover{background:rgba(255,255,255,.18)}
@@ -121,8 +154,8 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
         .lb-prev{left:var(--space-5)}.lb-next{right:var(--space-5)}
         .lb-prev:hover{transform:translateY(-50%) translateX(-2px)}.lb-next:hover{transform:translateY(-50%) translateX(2px)}
         .lb-counter{position:fixed;top:var(--space-5);left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:var(--text-xs);font-weight:600;padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);white-space:nowrap;font-variant-numeric:tabular-nums}
-        .lb-img-wrap{position:relative;max-width:min(90vw,1200px);max-height:82dvh;width:auto;height:auto}
-        .lb-img{display:block;max-width:min(90vw,1200px);max-height:82dvh;width:auto;height:auto;border-radius:var(--radius-xl);box-shadow:0 32px 80px rgba(0,0,0,.6);object-fit:contain}
+        .lb-stage{position:absolute;inset:54px 0 104px;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+        .lb-img{display:block;max-width:min(92vw,1400px);max-height:calc(100dvh - 158px);width:auto;height:auto;border-radius:var(--radius-xl);box-shadow:0 32px 80px rgba(0,0,0,.6);object-fit:contain;will-change:transform;transition:transform .14s cubic-bezier(.2,.8,.2,1),opacity .18s ease;user-select:none;-webkit-user-select:none}
         .lb-bar{position:fixed;bottom:0;left:0;right:0;padding:var(--space-4) var(--space-8);background:linear-gradient(to top,rgba(0,0,0,.85),transparent);display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap}
         .lb-hint{position:fixed;bottom:var(--space-16);left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.25);letter-spacing:.06em;text-transform:uppercase;display:none}
         .lb-actions{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;justify-content:flex-end}
@@ -130,7 +163,7 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
         .lb-action:hover{background:rgba(255,255,255,.16);color:#fff}.lb-action.favorite{color:#fff;background:rgba(220,38,38,.24);border-color:rgba(248,113,113,.35)}
         .lb-info-panel{position:fixed;right:var(--space-5);bottom:84px;width:min(360px,calc(100vw - 32px));padding:var(--space-4);border-radius:var(--radius-xl);background:rgba(15,15,18,.92);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(16px);color:#fff;box-shadow:0 24px 70px rgba(0,0,0,.45)}
         @media(hover:none){.lb-hint{display:block}.lb-prev,.lb-next{opacity:.35}}
-        @media(max-width:640px){.lb{align-items:flex-start;padding-top:64px}.lb-img{max-width:100vw;max-height:calc(100dvh - 190px);border-radius:0}.lb-prev,.lb-next{display:none}.lb-close{top:12px;right:12px}.lb-counter{top:16px}.lb-bar{padding:var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));display:block;background:linear-gradient(to top,rgba(0,0,0,.96),rgba(0,0,0,.58),transparent)}.lb-actions{margin-top:var(--space-3);justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.lb-action{min-height:40px;white-space:nowrap}.lb-info-panel{left:16px;right:16px;bottom:120px;width:auto}.lb-hint{bottom:112px}}
+        @media(max-width:640px){.lb{overscroll-behavior:none}.lb-stage{inset:52px 0 118px}.lb-img{max-width:100vw;max-height:calc(100dvh - 170px);border-radius:0}.lb-prev,.lb-next{display:none}.lb-close{top:12px;right:12px}.lb-counter{top:16px}.lb-bar{padding:var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));display:block;background:linear-gradient(to top,rgba(0,0,0,.96),rgba(0,0,0,.58),transparent)}.lb-actions{margin-top:var(--space-3);justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.lb-action{min-height:40px;white-space:nowrap}.lb-info-panel{left:16px;right:16px;bottom:120px;width:auto}.lb-hint{bottom:112px}}
       `}</style>
       <div
         className="lb"
@@ -139,14 +172,19 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
         aria-label={`Podgląd zdjęcia: ${photo.alt}`}
         onClick={onClose}
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
         <button ref={closeRef} className="lb-btn lb-close" onClick={onClose} aria-label="Zamknij podgląd"><X size={18}/></button>
         <div className="lb-counter" aria-live="polite">{index + 1} / {list.length}</div>
         <button className="lb-btn lb-prev" onClick={e=>{e.stopPropagation();onPrev()}} aria-label="Poprzednie zdjęcie"><ChevronLeft size={22}/></button>
-        <img key={photo.id} src={photo.src} alt={photo.alt} className="lb-img" onClick={e=>e.stopPropagation()}/>
+        <div className="lb-stage" onClick={e=>e.stopPropagation()}>
+          <img key={photo.id} src={photo.src} alt={photo.alt} className="lb-img"
+            style={{transform:`translate3d(${pan.x+dragX}px,${pan.y}px,0) scale(${zoom*(dragX?0.985:1)})`,opacity:dragX?0.88:1,cursor:zoom>1?"grab":"zoom-in"}}
+            onClick={e=>e.stopPropagation()} onDoubleClick={handleDoubleClick} draggable={false}/>
+        </div>
         <button className="lb-btn lb-next" onClick={e=>{e.stopPropagation();onNext()}} aria-label="Następne zdjęcie"><ChevronRight size={22}/></button>
-        <div className="lb-hint">← przesuń →</div>
+        <div className="lb-hint">{zoom>1?`${Math.round(zoom*100)}% · przesuń kadr`:"← przesuń · uszczypnij, aby powiększyć →"}</div>
         <div className="lb-bar" onClick={e=>e.stopPropagation()}>
           <div>
             <p style={{fontSize:"var(--text-sm)",fontWeight:700,color:"#fff",marginBottom:4}}>{photo.aircraft}</p>
@@ -181,9 +219,9 @@ function PhotoMasonry({ list, onOpen }: { list: Photo[]; onOpen: (i: number) => 
     <>
       <style>{`
         .masonry{columns:4 200px;column-gap:var(--space-3);padding-bottom:var(--space-20)}
-        @media(max-width:600px){.masonry{columns:2 130px}}
+        @media(max-width:600px){.masonry{columns:2;column-gap:6px;padding-bottom:var(--space-16);content-visibility:auto}.m-item{margin-bottom:6px;border-radius:8px;contain:layout paint}.m-item img{transition:none}.m-overlay,.m-caption{display:none}}
         .m-item{break-inside:avoid;margin-bottom:var(--space-3);border-radius:var(--radius-lg);overflow:hidden;cursor:zoom-in;position:relative;background:var(--color-surface-offset)}
-        .m-item img{display:block;width:100%;height:auto;transition:transform .4s cubic-bezier(.16,1,.3,1)}
+        .m-item img{display:block;width:100%;height:auto;transition:transform .4s cubic-bezier(.16,1,.3,1);-webkit-user-drag:none}
         .m-item:hover img{transform:scale(1.04)}
         .m-item:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}
         .m-overlay{position:absolute;inset:0;background:rgba(0,0,0,.28);opacity:0;transition:opacity .2s;display:flex;align-items:center;justify-content:center;color:#fff}
@@ -230,7 +268,7 @@ function MasonrySkeleton() {
       <style>{`
         @keyframes gShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
         .g-skeleton{columns:4 200px;column-gap:var(--space-3);padding-bottom:var(--space-20)}
-        @media(max-width:600px){.g-skeleton{columns:2 130px}}
+        @media(max-width:600px){.g-skeleton{columns:2;column-gap:6px}.g-sk-item{margin-bottom:6px}}
         .g-sk-item{break-inside:avoid;margin-bottom:var(--space-3);border-radius:var(--radius-lg);background:linear-gradient(90deg,var(--color-surface-offset) 25%,var(--color-surface-dynamic,var(--color-surface-offset)) 50%,var(--color-surface-offset) 75%);background-size:200% 100%;animation:gShimmer 1.5s ease-in-out infinite}
       `}</style>
       <div className="g-skeleton">
