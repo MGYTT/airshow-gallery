@@ -4,7 +4,7 @@ import {
   useState, useMemo, useCallback,
   useEffect, useRef, Suspense,
 } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import ShowCard from "@/components/ShowCard";
@@ -130,7 +130,7 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
         .lb-action:hover{background:rgba(255,255,255,.16);color:#fff}.lb-action.favorite{color:#fff;background:rgba(220,38,38,.24);border-color:rgba(248,113,113,.35)}
         .lb-info-panel{position:fixed;right:var(--space-5);bottom:84px;width:min(360px,calc(100vw - 32px));padding:var(--space-4);border-radius:var(--radius-xl);background:rgba(15,15,18,.92);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(16px);color:#fff;box-shadow:0 24px 70px rgba(0,0,0,.45)}
         @media(hover:none){.lb-hint{display:block}.lb-prev,.lb-next{opacity:.35}}
-        @media(max-width:640px){.lb-prev{left:var(--space-2)}.lb-next{right:var(--space-2)}.lb-bar{padding:var(--space-3) var(--space-4)}}
+        @media(max-width:640px){.lb{align-items:flex-start;padding-top:64px}.lb-img{max-width:100vw;max-height:calc(100dvh - 190px);border-radius:0}.lb-prev,.lb-next{display:none}.lb-close{top:12px;right:12px}.lb-counter{top:16px}.lb-bar{padding:var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));display:block;background:linear-gradient(to top,rgba(0,0,0,.96),rgba(0,0,0,.58),transparent)}.lb-actions{margin-top:var(--space-3);justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.lb-action{min-height:40px;white-space:nowrap}.lb-info-panel{left:16px;right:16px;bottom:120px;width:auto}.lb-hint{bottom:112px}}
       `}</style>
       <div
         className="lb"
@@ -311,6 +311,7 @@ function SelectRow({ icon: Icon, label, value, onChange, options }: {
 // ─────────────────────────────────────────────────────────────
 function GalleryContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialShow  = searchParams.get("show") ?? "all";
   const initialPhoto = searchParams.get("photo");
 
@@ -323,14 +324,14 @@ function GalleryContent() {
   const [activeShow, setActiveShow]       = useState(initialShow);
   const [view, setView]                   = useState<ViewMode>("grid");
   const [lbIndex, setLbIndex]             = useState<number | null>(null);
-  const [search, setSearch]               = useState("");
-  const [filterYear, setFilterYear]       = useState("all");
-  const [filterCountry, setFilterCountry] = useState("all");
-  const [filterTag, setFilterTag]         = useState("all");
-  const [sort, setSort]                   = useState<SortKey>("newest");
+  const [search, setSearch]               = useState(searchParams.get("q") ?? "");
+  const [filterYear, setFilterYear]       = useState(searchParams.get("year") ?? "all");
+  const [filterCountry, setFilterCountry] = useState(searchParams.get("country") ?? "all");
+  const [filterTag, setFilterTag]         = useState(searchParams.get("tag") ?? "all");
+  const [sort, setSort]                   = useState<SortKey>((searchParams.get("sort") as SortKey) ?? "newest");
   const [sheetOpen, setSheetOpen]         = useState(false);
   const [showsSheetOpen, setShowsSheetOpen] = useState(false);
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(searchParams.get("favorites")==="1");
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -345,6 +346,20 @@ function GalleryContent() {
   }, []);
 
   const debouncedSearch = useDebounced(search, 200);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activeShow!=="all") params.set("show", activeShow);
+    if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
+    if (filterYear!=="all") params.set("year", filterYear);
+    if (filterCountry!=="all") params.set("country", filterCountry);
+    if (filterTag!=="all") params.set("tag", filterTag);
+    if (sort!=="newest") params.set("sort", sort);
+    if (favoritesOnly) params.set("favorites", "1");
+    if (lbIndex!==null && filteredPhotos[lbIndex]) params.set("photo", filteredPhotos[lbIndex].id);
+    const query = params.toString();
+    router.replace(query ? `/gallery?${query}` : "/gallery", { scroll: false });
+  }, [activeShow, debouncedSearch, filterYear, filterCountry, filterTag, sort, favoritesOnly, lbIndex, filteredPhotos, router]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
