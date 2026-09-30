@@ -14,7 +14,7 @@ import {
   Images, Plane, MapPin, Calendar,
   Loader2, Search, ArrowUpDown,
   SlidersHorizontal, Check, AlertTriangle, RotateCw,
-  Heart, Share2, Info,
+  Heart, Share2, Info, Maximize2,
 } from "lucide-react";
 
 // ── Typy ─────────────────────────────────────────────────────
@@ -63,6 +63,7 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
   const panStart = useRef<{x:number;y:number;px:number;py:number} | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [chromeVisible, setChromeVisible] = useState(true);
   const isFavorite = photo ? favorites.has(photo.id) : false;
 
   const sharePhoto = useCallback(async () => {
@@ -137,7 +138,7 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
     if(zoom>1)resetZoom(); else {setZoom(2.5);setPan({x:0,y:0});}
   }
 
-  useEffect(()=>{ resetZoom(); setInfoOpen(false); },[photo?.id]);
+  useEffect(()=>{ resetZoom(); setInfoOpen(false); setChromeVisible(true); },[photo?.id]);
 
   if (!photo) return null;
 
@@ -146,7 +147,7 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
       <style>{`
         .lb{position:fixed;inset:0;background:rgba(0,0,0,.98);z-index:9999;display:grid;place-items:center;overflow:hidden;animation:lbIn .18s ease}
         @keyframes lbIn{from{opacity:0}to{opacity:1}}
-        .lb-btn{position:fixed;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+        .lb-btn{position:fixed;background:rgba(12,12,14,.58);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.12);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,opacity .2s,transform .2s}
         .lb-btn:hover{background:rgba(255,255,255,.18)}
         .lb-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
         .lb-close{top:var(--space-5);right:var(--space-5);width:44px;height:44px;border-radius:var(--radius-full)}
@@ -154,16 +155,16 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
         .lb-prev{left:var(--space-5)}.lb-next{right:var(--space-5)}
         .lb-prev:hover{transform:translateY(-50%) translateX(-2px)}.lb-next:hover{transform:translateY(-50%) translateX(2px)}
         .lb-counter{position:fixed;top:var(--space-5);left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:var(--text-xs);font-weight:600;padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);white-space:nowrap;font-variant-numeric:tabular-nums}
-        .lb-stage{position:absolute;inset:54px 0 104px;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
-        .lb-img{display:block;max-width:min(92vw,1400px);max-height:calc(100dvh - 158px);width:auto;height:auto;border-radius:var(--radius-xl);box-shadow:0 32px 80px rgba(0,0,0,.6);object-fit:contain;will-change:transform;transition:transform .14s cubic-bezier(.2,.8,.2,1),opacity .18s ease;user-select:none;-webkit-user-select:none}
-        .lb-bar{position:fixed;bottom:0;left:0;right:0;padding:var(--space-4) var(--space-8);background:linear-gradient(to top,rgba(0,0,0,.85),transparent);display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap}
+        .lb-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;padding:56px 0 112px}
+        .lb-img{display:block;max-width:min(96vw,1800px);max-height:calc(100dvh - 148px);width:auto;height:auto;border-radius:var(--radius-xl);box-shadow:0 32px 80px rgba(0,0,0,.6);object-fit:contain;will-change:transform;transition:transform .14s cubic-bezier(.2,.8,.2,1),opacity .18s ease;user-select:none;-webkit-user-select:none}
+        .lb-bar{position:fixed;bottom:0;left:0;right:0;padding:28px 32px 20px;background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.32),transparent);display:flex;align-items:flex-end;justify-content:space-between;gap:20px}
         .lb-hint{position:fixed;bottom:var(--space-16);left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.25);letter-spacing:.06em;text-transform:uppercase;display:none}
-        .lb-actions{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;justify-content:flex-end}
-        .lb-action{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);font-weight:650;color:rgba(255,255,255,.82);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);cursor:pointer;backdrop-filter:blur(6px)}
+        .lb-actions{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+        .lb-action{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:12px;font-weight:650;color:rgba(255,255,255,.86);background:rgba(20,20,22,.62);border:1px solid rgba(255,255,255,.12);min-height:42px;padding:0 13px;border-radius:999px;cursor:pointer;backdrop-filter:blur(14px)}
         .lb-action:hover{background:rgba(255,255,255,.16);color:#fff}.lb-action.favorite{color:#fff;background:rgba(220,38,38,.24);border-color:rgba(248,113,113,.35)}
         .lb-info-panel{position:fixed;right:var(--space-5);bottom:84px;width:min(360px,calc(100vw - 32px));padding:var(--space-4);border-radius:var(--radius-xl);background:rgba(15,15,18,.92);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(16px);color:#fff;box-shadow:0 24px 70px rgba(0,0,0,.45)}
         @media(hover:none){.lb-hint{display:block}.lb-prev,.lb-next{opacity:.35}}
-        @media(max-width:640px){.lb{overscroll-behavior:none}.lb-stage{inset:52px 0 118px}.lb-img{max-width:100vw;max-height:calc(100dvh - 170px);border-radius:0}.lb-prev,.lb-next{display:none}.lb-close{top:12px;right:12px}.lb-counter{top:16px}.lb-bar{padding:var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));display:block;background:linear-gradient(to top,rgba(0,0,0,.96),rgba(0,0,0,.58),transparent)}.lb-actions{margin-top:var(--space-3);justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.lb-action{min-height:40px;white-space:nowrap}.lb-info-panel{left:16px;right:16px;bottom:120px;width:auto}.lb-hint{bottom:112px}}
+        @media(max-width:640px){.lb{overscroll-behavior:none}.lb-stage{inset:0;padding:46px 0 96px}.lb-img{max-width:100vw;max-height:calc(100dvh - 126px);border-radius:0}.lb-prev,.lb-next{display:none}.lb-close{top:max(10px,env(safe-area-inset-top));right:12px;width:42px;height:42px}.lb-counter{top:max(14px,env(safe-area-inset-top));font-size:11px;padding:7px 11px}.lb-bar{padding:38px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,.28),transparent);align-items:center}.lb-bar>div:first-child{min-width:0;flex:1}.lb-bar>div:first-child p:last-child{display:none}.lb-actions{margin:0;gap:6px;flex-shrink:0}.lb-action{width:42px;height:42px;min-height:42px;padding:0;border-radius:999px}.lb-action span,.lb-action-label{display:none}.lb-info-panel{left:12px;right:12px;bottom:82px;width:auto;max-height:45dvh;overflow:auto}.lb-hint{bottom:82px}.lb-show-link{display:none}}
       `}</style>
       <div
         className="lb"
@@ -175,27 +176,28 @@ function Lightbox({ list, index, onClose, onPrev, onNext, shows, favorites, onTo
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <button ref={closeRef} className="lb-btn lb-close" onClick={onClose} aria-label="Zamknij podgląd"><X size={18}/></button>
-        <div className="lb-counter" aria-live="polite">{index + 1} / {list.length}</div>
+        <button ref={closeRef} className="lb-btn lb-close" style={{opacity:chromeVisible?1:0,pointerEvents:chromeVisible?"auto":"none"}} onClick={onClose} aria-label="Zamknij podgląd"><X size={18}/></button>
+        <div className="lb-counter" style={{opacity:chromeVisible?1:0,transition:"opacity .2s"}} aria-live="polite">{index + 1} / {list.length}</div>
         <button className="lb-btn lb-prev" onClick={e=>{e.stopPropagation();onPrev()}} aria-label="Poprzednie zdjęcie"><ChevronLeft size={22}/></button>
-        <div className="lb-stage" onClick={e=>e.stopPropagation()}>
-          <img key={photo.id} src={photo.src} alt={photo.alt} className="lb-img"
-            style={{transform:`translate3d(${pan.x+dragX}px,${pan.y}px,0) scale(${zoom*(dragX?0.985:1)})`,opacity:dragX?0.88:1,cursor:zoom>1?"grab":"zoom-in"}}
+        <div className="lb-stage" onClick={e=>{e.stopPropagation();if(zoom===1)setChromeVisible(v=>!v)}}>
+          <img key={photo.id} src={photo.src} alt={photo.alt} className="lb-img" decoding="async" fetchPriority="high"
+            style={{imageRendering:"auto",transform:`translate3d(${pan.x+dragX}px,${pan.y}px,0) scale(${zoom*(dragX?0.985:1)})`,opacity:dragX?0.88:1,cursor:zoom>1?"grab":"zoom-in"}}
             onClick={e=>e.stopPropagation()} onDoubleClick={handleDoubleClick} draggable={false}/>
         </div>
         <button className="lb-btn lb-next" onClick={e=>{e.stopPropagation();onNext()}} aria-label="Następne zdjęcie"><ChevronRight size={22}/></button>
-        <div className="lb-hint">{zoom>1?`${Math.round(zoom*100)}% · przesuń kadr`:"← przesuń · uszczypnij, aby powiększyć →"}</div>
-        <div className="lb-bar" onClick={e=>e.stopPropagation()}>
+        <div className="lb-hint" style={{opacity:chromeVisible?1:0}}>{zoom>1?`${Math.round(zoom*100)}% · przesuń kadr`:"← przesuń · uszczypnij, aby powiększyć →"}</div>
+        <div className="lb-bar" style={{opacity:chromeVisible?1:0,pointerEvents:chromeVisible?"auto":"none",transition:"opacity .2s"}} onClick={e=>e.stopPropagation()}>
           <div>
             <p style={{fontSize:"var(--text-sm)",fontWeight:700,color:"#fff",marginBottom:4}}>{photo.aircraft}</p>
             <p style={{fontSize:"var(--text-xs)",color:"rgba(255,255,255,.55)"}}>{photo.alt}</p>
           </div>
           <div className="lb-actions">
-            <button className={`lb-action ${isFavorite?"favorite":""}`} onClick={()=>onToggleFavorite(photo.id)} aria-label={isFavorite?"Usuń z ulubionych":"Dodaj do ulubionych"}><Heart size={14} fill={isFavorite?"currentColor":"none"}/>{isFavorite?"Ulubione":"Dodaj"}</button>
-            <button className="lb-action" onClick={sharePhoto}><Share2 size={14}/>Udostępnij</button>
-            <button className="lb-action" onClick={()=>setInfoOpen(v=>!v)} aria-expanded={infoOpen}><Info size={14}/>Informacje</button>
+            <button className={`lb-action ${isFavorite?"favorite":""}`} onClick={()=>onToggleFavorite(photo.id)} aria-label={isFavorite?"Usuń z ulubionych":"Dodaj do ulubionych"}><Heart size={15} fill={isFavorite?"currentColor":"none"}/><span className="lb-action-label">{isFavorite?"Ulubione":"Dodaj"}</span></button>
+            <button className="lb-action" onClick={()=>{if(zoom>1)resetZoom();else{setZoom(2);setPan({x:0,y:0})}}} title={zoom>1?"Wróć do dopasowania":"Pokaż w skali 1:1"} aria-pressed={zoom>1}><Maximize2 size={15}/><span className="lb-action-label">{zoom>1?"Dopasuj":"1:1"}</span></button>
+            <button className="lb-action" onClick={sharePhoto} aria-label="Udostępnij"><Share2 size={15}/><span className="lb-action-label">Udostępnij</span></button>
+            <button className="lb-action" onClick={()=>setInfoOpen(v=>!v)} aria-expanded={infoOpen} aria-label="Informacje"><Info size={15}/><span className="lb-action-label">Info</span></button>
             {show && (
-              <Link href={`/pokaz/${show.id}`} className="lb-action" style={{textDecoration:"none"}}><Images size={12}/>{show.name}</Link>
+              <Link href={`/pokaz/${show.id}`} className="lb-action lb-show-link" style={{textDecoration:"none"}}><Images size={14}/><span className="lb-action-label">{show.name}</span></Link>
             )}
           </div>
         </div>
@@ -243,6 +245,7 @@ function PhotoMasonry({ list, onOpen }: { list: Photo[]; onOpen: (i: number) => 
             <img
               src={photo.src}
               alt={photo.alt || `Zdjęcie z pokazu lotniczego — ${photo.aircraft}`}
+              sizes="(max-width: 600px) 50vw, (max-width: 1000px) 33vw, 25vw"
               width={photo.width}
               height={photo.height}
               loading={i<8?"eager":"lazy"}
