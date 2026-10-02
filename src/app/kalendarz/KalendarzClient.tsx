@@ -247,9 +247,11 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
         .calendar-hero{
           position:relative;
           overflow:hidden;
-          padding:clamp(var(--space-10),7vw,var(--space-20)) 0;
+          padding:clamp(var(--space-10),7vw,var(--space-20)) 0 clamp(var(--space-12),8vw,var(--space-24));
           border-bottom:1px solid var(--color-divider);
-          background:var(--color-surface);
+          background:
+            linear-gradient(180deg,color-mix(in srgb,var(--color-surface-offset) 72%,transparent),transparent 72%),
+            var(--color-surface);
         }
         .calendar-hero::before{
           content:"";
@@ -257,8 +259,12 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
           inset:0;
           pointer-events:none;
           background:
-            radial-gradient(ellipse 60% 70% at 100% 0%,color-mix(in srgb,var(--color-accent) 8%,transparent),transparent 70%),
-            radial-gradient(ellipse 44% 58% at 0% 100%,color-mix(in srgb,var(--color-gold) 7%,transparent),transparent 74%);
+            linear-gradient(90deg,color-mix(in srgb,var(--color-divider) 38%,transparent) 1px,transparent 1px),
+            linear-gradient(color-mix(in srgb,var(--color-divider) 28%,transparent) 1px,transparent 1px),
+            radial-gradient(ellipse 60% 70% at 100% 0%,color-mix(in srgb,var(--color-accent) 11%,transparent),transparent 70%),
+            radial-gradient(ellipse 44% 58% at 0% 100%,color-mix(in srgb,var(--color-gold) 8%,transparent),transparent 74%);
+          background-size:48px 48px,48px 48px,auto,auto;
+          mask-image:linear-gradient(to bottom,black,transparent 92%);
         }
         .calendar-hero-deco{
           position:absolute;
@@ -297,34 +303,71 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
         }
         .calendar-back:hover{color:var(--color-accent)}
         .calendar-title{
-          max-width:16ch;
+          max-width:14ch;
           font-family:var(--font-display);
-          font-weight:900;
-          font-size:var(--text-2xl);
-          line-height:1.02;
-          letter-spacing:-.045em;
+          font-weight:950;
+          font-size:clamp(2.8rem,7vw,5.8rem);
+          line-height:.94;
+          letter-spacing:-.06em;
           margin-bottom:var(--space-5);
         }
         .calendar-title-accent{color:var(--color-accent)}
         .calendar-subtitle{
-          max-width:60ch;
-          font-size:var(--text-base);
+          max-width:58ch;
+          font-size:clamp(var(--text-sm),1.6vw,var(--text-base));
           color:var(--color-text-muted);
           line-height:1.75;
         }
-        .calendar-stats{
+        .calendar-hero-meta{
           display:flex;
-          align-items:stretch;
+          align-items:center;
+          gap:var(--space-3);
           flex-wrap:wrap;
-          gap:var(--space-6);
+          margin-bottom:var(--space-5);
+        }
+        .calendar-year-pill{
+          display:inline-flex;
+          align-items:center;
+          gap:var(--space-2);
+          min-height:34px;
+          padding:0 var(--space-3);
+          border-radius:var(--radius-full);
+          color:var(--color-accent);
+          background:var(--color-accent-subtle);
+          border:1px solid color-mix(in srgb,var(--color-accent) 26%,transparent);
+          font-size:var(--text-xs);
+          font-weight:850;
+          letter-spacing:.06em;
+          text-transform:uppercase;
+        }
+        .calendar-stats{
+          display:grid;
+          grid-template-columns:repeat(4,minmax(0,1fr));
+          gap:var(--space-3);
+          max-width:850px;
           margin-top:var(--space-10);
         }
         .calendar-stat{
-          min-width:122px;
-          padding-right:var(--space-6);
-          border-right:1px solid var(--color-divider);
+          position:relative;
+          min-width:0;
+          padding:var(--space-4);
+          border:1px solid var(--color-border);
+          border-radius:var(--radius-xl);
+          background:color-mix(in srgb,var(--color-surface) 86%,transparent);
+          backdrop-filter:blur(10px);
+          box-shadow:0 10px 30px rgba(0,0,0,.035);
         }
-        .calendar-stat:last-child{border-right:0}
+        .calendar-stat::after{
+          content:"";
+          position:absolute;
+          top:var(--space-3);
+          right:var(--space-3);
+          width:7px;
+          height:7px;
+          border-radius:50%;
+          background:var(--color-divider);
+        }
+        .calendar-stat--accent::after{background:var(--color-accent);box-shadow:0 0 0 4px var(--color-accent-subtle)}
         .calendar-stat-value{
           display:block;
           font-family:var(--font-display);
@@ -345,8 +388,10 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
         }
         .calendar-content{
           max-width:var(--content-default);
-          margin:0 auto;
-          padding:var(--space-8) clamp(var(--space-4),4vw,var(--space-8));
+          margin:-34px auto 0;
+          padding:0 clamp(var(--space-4),4vw,var(--space-8)) var(--space-8);
+          position:relative;
+          z-index:2;
         }
         .calendar-section-heading{
           display:flex;
@@ -559,10 +604,10 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
           .calendar-hero{padding-block:var(--space-10)}
           .calendar-title{font-size:clamp(2rem,10vw,3rem)}
           .calendar-subtitle{font-size:var(--text-sm)}
-          .calendar-stats{gap:var(--space-4);margin-top:var(--space-8)}
-          .calendar-stat{min-width:calc(50% - var(--space-2));padding-right:0;border-right:0}
+          .calendar-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3);margin-top:var(--space-8)}
+          .calendar-stat{padding:var(--space-3)}
           .calendar-stat-value{font-size:var(--text-lg)}
-          .calendar-content{padding-top:var(--space-6)}
+          .calendar-content{margin-top:-22px;padding-top:0}
           .calendar-cta{padding:var(--space-6)}
           .calendar-cta .btn{width:100%}
         }
@@ -581,10 +626,16 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
               Strona główna
             </Link>
 
-            <span className="badge" style={{ marginBottom:"var(--space-4)" }}>
-              <CalendarDays size={12} />
-              Aktualny kalendarz
-            </span>
+            <div className="calendar-hero-meta">
+              <span className="badge">
+                <CalendarDays size={12} />
+                Aktualny kalendarz
+              </span>
+              <span className="calendar-year-pill">
+                <Sparkles size={12} />
+                Sezon {currentYear}
+              </span>
+            </div>
 
             <h1 className="calendar-title">
               Kalendarz pokazów <span className="calendar-title-accent">lotniczych</span>
@@ -601,7 +652,7 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
                 <span className="calendar-stat-label">Opublikowanych wydarzeń</span>
               </div>
 
-              <div className="calendar-stat">
+              <div className="calendar-stat calendar-stat--accent">
                 <span className="calendar-stat-value" style={{ color:"var(--color-accent)" }}>
                   {totalUpcoming}
                 </span>
