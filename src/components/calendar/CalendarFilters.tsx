@@ -68,32 +68,67 @@ export default function CalendarFilters({
     <>
       <style>{`
         .calendar-filters{
+          position:relative;
+          overflow:hidden;
           padding:var(--space-5);
-          background:var(--color-surface);
+          background:
+            linear-gradient(180deg,color-mix(in srgb,var(--color-surface-offset) 55%,transparent),transparent 42%),
+            var(--color-surface);
           border:1px solid var(--color-border);
-          border-radius:var(--radius-xl);
-          box-shadow:var(--shadow-sm);
+          border-radius:var(--radius-2xl);
+          box-shadow:0 18px 50px rgba(0,0,0,.06);
+        }
+        .calendar-filters::before{
+          content:"";
+          position:absolute;
+          inset:0 auto 0 0;
+          width:3px;
+          background:linear-gradient(180deg,var(--color-accent),var(--color-gold));
         }
         .calendar-filters-header{
           display:flex;
-          align-items:center;
+          align-items:flex-start;
           justify-content:space-between;
           gap:var(--space-4);
-          margin-bottom:var(--space-4);
+          margin-bottom:var(--space-5);
+          padding-bottom:var(--space-4);
+          border-bottom:1px solid var(--color-divider);
+        }
+        .calendar-filters-title-wrap{display:flex;align-items:flex-start;gap:var(--space-3)}
+        .calendar-filters-icon{
+          width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;
+          border-radius:var(--radius-lg);
+          color:var(--color-accent);
+          background:var(--color-accent-subtle);
+          border:1px solid color-mix(in srgb,var(--color-accent) 24%,transparent);
         }
         .calendar-filters-title{
-          display:inline-flex;
-          align-items:center;
-          gap:var(--space-2);
-          font-size:var(--text-sm);
-          font-weight:800;
+          display:block;
+          font-family:var(--font-display);
+          font-size:var(--text-base);
+          font-weight:900;
+          letter-spacing:-.02em;
           color:var(--color-text);
         }
-        .calendar-filters-count{
+        .calendar-filters-subtitle{
+          margin-top:2px;
           font-size:var(--text-xs);
-          font-weight:700;
           color:var(--color-text-faint);
+          line-height:1.45;
+        }
+        .calendar-filters-count{
+          display:inline-flex;
+          align-items:center;
+          min-height:30px;
+          padding:0 var(--space-3);
+          border-radius:var(--radius-full);
+          background:var(--color-surface-offset);
+          border:1px solid var(--color-border);
+          font-size:var(--text-xs);
+          font-weight:800;
+          color:var(--color-text-muted);
           font-variant-numeric:tabular-nums;
+          white-space:nowrap;
         }
         .calendar-filter-grid{
           display:grid;
@@ -114,8 +149,8 @@ export default function CalendarFilters({
           width:100%;
           min-height:44px;
           border:1.5px solid var(--color-border-strong);
-          border-radius:var(--radius-md);
-          background:var(--color-surface);
+          border-radius:var(--radius-lg);
+          background:color-mix(in srgb,var(--color-surface) 92%,var(--color-surface-offset));
           color:var(--color-text);
           font-size:var(--text-sm);
           outline:none;
@@ -126,9 +161,12 @@ export default function CalendarFilters({
         .calendar-filter-select{
           padding:var(--space-2) var(--space-3);
         }
+        .calendar-filter-input:hover,
+        .calendar-filter-select:hover{border-color:color-mix(in srgb,var(--color-accent) 32%,var(--color-border-strong))}
         .calendar-filter-input:focus,
         .calendar-filter-select:focus{
           border-color:var(--color-accent);
+          background:var(--color-surface);
           box-shadow:var(--focus-ring);
         }
         .calendar-filter-clear{
@@ -160,11 +198,20 @@ export default function CalendarFilters({
           display:inline-flex;
           align-items:center;
           gap:var(--space-2);
+          min-height:34px;
+          padding:0 var(--space-3);
+          border-radius:var(--radius-full);
+          border:1px solid var(--color-border);
+          background:var(--color-surface-offset);
           font-size:var(--text-xs);
-          font-weight:600;
+          font-weight:700;
           color:var(--color-text-muted);
           cursor:pointer;
-          min-height:30px;
+          transition:border-color var(--transition),background var(--transition),color var(--transition);
+        }
+        .calendar-filter-checkbox:hover{
+          border-color:color-mix(in srgb,var(--color-accent) 34%,var(--color-border));
+          color:var(--color-text);
         }
         .calendar-filter-checkbox input{
           width:16px;
@@ -194,18 +241,29 @@ export default function CalendarFilters({
           }
         }
         @media(max-width:620px){
-          .calendar-filters{padding:var(--space-4)}
+          .calendar-filters{padding:var(--space-4);border-radius:var(--radius-xl)}
+          .calendar-filters-header{align-items:flex-start}
+          .calendar-filters-subtitle{display:none}
           .calendar-filter-grid{grid-template-columns:1fr}
           .calendar-filter-search{grid-column:auto}
+          .calendar-filter-bottom{align-items:stretch}
+          .calendar-filter-checkbox{width:100%;justify-content:center}
         }
       `}</style>
 
       <section className="calendar-filters" aria-label="Filtry kalendarza">
         <div className="calendar-filters-header">
-          <p className="calendar-filters-title">
-            <SlidersHorizontal size={16} color="var(--color-accent)" />
-            Znajdź pokaz
-          </p>
+          <div className="calendar-filters-title-wrap">
+            <span className="calendar-filters-icon" aria-hidden>
+              <SlidersHorizontal size={17} />
+            </span>
+            <div>
+              <p className="calendar-filters-title">Znajdź pokaz</p>
+              <p className="calendar-filters-subtitle">
+                Filtruj po miejscu, terminie, typie wydarzenia i rodzaju wstępu.
+              </p>
+            </div>
+          </div>
 
           <span className="calendar-filters-count">
             {resultsCount} {resultsCount === 1 ? "wydarzenie" : "wydarzeń"}
