@@ -205,6 +205,39 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
     return events.filter((event) => eventIsPast(event)).length;
   }, [events]);
 
+  const currentYear = new Date().getFullYear();
+  const nextYear = currentYear + 1;
+
+  const currentYearEvents = useMemo(() => {
+    return events.filter(
+      (event) => new Date(event.startDate).getFullYear() === currentYear
+    );
+  }, [events, currentYear]);
+
+  const currentYearUpcoming = useMemo(() => {
+    return currentYearEvents.filter(
+      (event) => !eventIsPast(event) && event.status !== "cancelled"
+    );
+  }, [currentYearEvents]);
+
+  const nextYearEvents = useMemo(() => {
+    return events.filter(
+      (event) => new Date(event.startDate).getFullYear() === nextYear
+    );
+  }, [events, nextYear]);
+
+  const hasActiveFilters =
+    filters.search !== INITIAL_FILTERS.search ||
+    filters.countryCode !== INITIAL_FILTERS.countryCode ||
+    filters.month !== INITIAL_FILTERS.month ||
+    filters.eventType !== INITIAL_FILTERS.eventType ||
+    filters.admissionType !== INITIAL_FILTERS.admissionType ||
+    filters.showPast !== INITIAL_FILTERS.showPast;
+
+  const seasonFinished =
+    currentYearEvents.length > 0 && currentYearUpcoming.length === 0;
+  const nextYearIsEmpty = nextYearEvents.length === 0;
+
   const totalCountries = countries.length;
 
   return (
@@ -394,6 +427,93 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
           color:var(--color-text-faint);
           margin:0 auto var(--space-5);
         }
+        .calendar-season-finished{
+          position:relative;
+          overflow:hidden;
+          margin-top:var(--space-8);
+          padding:clamp(var(--space-6),5vw,var(--space-10));
+          border:1px solid color-mix(in srgb,var(--color-accent) 26%,var(--color-divider));
+          border-radius:var(--radius-2xl);
+          background:
+            radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--color-accent) 10%,transparent),transparent 38%),
+            var(--color-surface);
+        }
+        .calendar-season-finished::after{
+          content:"✈";
+          position:absolute;
+          right:-1rem;
+          bottom:-3.25rem;
+          font-size:clamp(7rem,17vw,12rem);
+          line-height:1;
+          color:var(--color-accent);
+          opacity:.045;
+          transform:rotate(-12deg);
+          pointer-events:none;
+        }
+        .calendar-season-kicker{
+          display:inline-flex;
+          align-items:center;
+          gap:var(--space-2);
+          margin-bottom:var(--space-3);
+          color:var(--color-accent);
+          font-size:var(--text-xs);
+          font-weight:800;
+          letter-spacing:.09em;
+          text-transform:uppercase;
+        }
+        .calendar-season-title{
+          position:relative;
+          z-index:1;
+          max-width:24ch;
+          font-family:var(--font-display);
+          font-size:var(--text-xl);
+          font-weight:900;
+          letter-spacing:-.035em;
+          line-height:1.08;
+          margin-bottom:var(--space-3);
+        }
+        .calendar-season-copy{
+          position:relative;
+          z-index:1;
+          max-width:64ch;
+          color:var(--color-text-muted);
+          font-size:var(--text-sm);
+          line-height:1.7;
+        }
+        .calendar-next-year-note{
+          position:relative;
+          z-index:1;
+          display:flex;
+          align-items:flex-start;
+          gap:var(--space-3);
+          max-width:720px;
+          margin-top:var(--space-6);
+          padding:var(--space-5);
+          border:1px solid var(--color-divider);
+          border-radius:var(--radius-xl);
+          background:var(--color-surface-offset);
+        }
+        .calendar-next-year-note strong{
+          display:block;
+          margin-bottom:var(--space-1);
+          color:var(--color-text);
+          font-family:var(--font-display);
+          font-size:var(--text-base);
+          font-weight:850;
+        }
+        .calendar-next-year-note p{
+          color:var(--color-text-muted);
+          font-size:var(--text-sm);
+          line-height:1.6;
+        }
+        .calendar-season-actions{
+          position:relative;
+          z-index:1;
+          display:flex;
+          gap:var(--space-3);
+          flex-wrap:wrap;
+          margin-top:var(--space-6);
+        }
         .calendar-cta{
           position:relative;
           overflow:hidden;
@@ -513,6 +633,50 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
             onReset={() => setFilters(INITIAL_FILTERS)}
           />
 
+          {seasonFinished && nextYearIsEmpty && !hasActiveFilters && (
+            <section
+              className="calendar-season-finished"
+              aria-labelledby="season-finished-heading"
+            >
+              <p className="calendar-season-kicker">
+                <CheckCircle2 size={15} />
+                Sezon {currentYear}
+              </p>
+
+              <h2 id="season-finished-heading" className="calendar-season-title">
+                Sezon pokazów {currentYear} dobiegł końca
+              </h2>
+
+              <p className="calendar-season-copy">
+                Na ten rok nie mamy już nadchodzących wydarzeń w kalendarzu.
+                Zakończone terminy nadal możesz wyświetlić w archiwum.
+              </p>
+
+              <div className="calendar-next-year-note">
+                <Sparkles size={20} color="var(--color-gold)" aria-hidden />
+                <div>
+                  <strong>Kalendarz {nextYear}</strong>
+                  <p>
+                    Nie dodano jeszcze żadnych wydarzeń na {nextYear} rok.
+                    Kalendarz będzie uzupełniany wraz z pojawianiem się
+                    oficjalnych terminów organizatorów.
+                  </p>
+                </div>
+              </div>
+
+              <div className="calendar-season-actions">
+                <button
+                  className="btn btn-ghost"
+                  onClick={() =>
+                    setFilters({ ...INITIAL_FILTERS, showPast: true })
+                  }
+                >
+                  Zobacz zakończone wydarzenia {currentYear}
+                </button>
+              </div>
+            </section>
+          )}
+
           {nextEvent && (
             <section style={{ marginTop:"var(--space-8)" }} aria-labelledby="next-event-heading">
               <p className="calendar-next-label">
@@ -566,7 +730,10 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
             </section>
           )}
 
-          {!nextEvent && upcomingEvents.length === 0 && pastEvents.length === 0 && (
+          {hasActiveFilters &&
+            !nextEvent &&
+            upcomingEvents.length === 0 &&
+            pastEvents.length === 0 && (
             <section className="calendar-empty">
               <div className="calendar-empty-icon">
                 <MapPin size={23} />
@@ -583,7 +750,7 @@ export default function KalendarzClient({ events }: KalendarzClientProps) {
             </section>
           )}
 
-          {events.length === 0 && (
+          {events.length === 0 && !hasActiveFilters && (
             <section className="calendar-empty">
               <div className="calendar-empty-icon">
                 <CalendarDays size={23} />
