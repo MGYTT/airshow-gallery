@@ -246,29 +246,35 @@ export default function EventCard({
           position:relative;
           display:grid;
           grid-template-columns:auto minmax(0,1fr) auto;
-          gap:var(--space-4);
+          gap:var(--space-5);
           align-items:center;
           padding:var(--space-5);
           border:1px solid var(--color-border);
-          border-radius:var(--radius-xl);
-          background:var(--color-surface);
+          border-radius:var(--radius-2xl);
+          background:
+            linear-gradient(135deg,color-mix(in srgb,var(--color-surface-offset) 38%,transparent),transparent 52%),
+            var(--color-surface);
           color:var(--color-text);
           text-decoration:none;
           overflow:hidden;
+          box-shadow:0 8px 30px rgba(0,0,0,.035);
           transition:transform var(--transition),box-shadow var(--transition),border-color var(--transition),background var(--transition);
         }
         .event-card:hover{
-          transform:translateY(-3px);
-          box-shadow:var(--shadow-md);
-          border-color:color-mix(in srgb,var(--color-accent) 36%,transparent);
+          transform:translateY(-4px);
+          box-shadow:0 18px 46px rgba(0,0,0,.10);
+          border-color:color-mix(in srgb,var(--color-accent) 38%,transparent);
         }
         .event-card:focus-visible{
           outline:none;
           box-shadow:var(--focus-ring),var(--shadow-md);
         }
         .event-card--next{
-          background:var(--color-accent-subtle);
+          background:
+            radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--color-accent) 16%,transparent),transparent 34%),
+            linear-gradient(135deg,var(--color-accent-subtle),var(--color-surface));
           border-color:color-mix(in srgb,var(--color-accent) 44%,transparent);
+          box-shadow:0 16px 44px color-mix(in srgb,var(--color-accent) 12%,transparent);
         }
         .event-card--completed{opacity:.66}
         .event-card--cancelled{opacity:.72}
@@ -288,15 +294,15 @@ export default function EventCard({
         .event-card--cancelled .event-card-stripe{background:#dc2626}
         .event-card--completed .event-card-stripe{background:var(--color-text-faint)}
         .event-card-date{
-          width:52px;
-          height:58px;
+          width:58px;
+          height:64px;
           display:flex;
           flex-direction:column;
           align-items:center;
           justify-content:center;
           flex-shrink:0;
-          border-radius:var(--radius-lg);
-          background:var(--color-surface-offset);
+          border-radius:var(--radius-xl);
+          background:linear-gradient(180deg,var(--color-surface-offset),var(--color-surface));
           border:1px solid var(--color-border);
           transition:transform var(--transition),background var(--transition);
         }
@@ -334,7 +340,7 @@ export default function EventCard({
         }
         .event-card-title{
           font-family:var(--font-display);
-          font-size:var(--text-base);
+          font-size:clamp(var(--text-base),2vw,var(--text-lg));
           line-height:1.25;
           letter-spacing:-.022em;
           font-weight:800;
@@ -440,10 +446,10 @@ export default function EventCard({
           flex-direction:column;
           align-items:center;
           justify-content:center;
-          min-width:62px;
-          min-height:48px;
+          min-width:70px;
+          min-height:54px;
           padding:var(--space-2);
-          border-radius:var(--radius-lg);
+          border-radius:var(--radius-xl);
           background:var(--color-surface-offset);
           border:1px solid var(--color-border);
           color:var(--color-text-muted);
@@ -488,13 +494,15 @@ export default function EventCard({
         }
         .event-card--compact{
           padding:var(--space-4);
-          border-radius:var(--radius-lg);
+          border-radius:var(--radius-xl);
+          box-shadow:none;
         }
         .event-card--compact .event-card-description,
         .event-card--compact .event-card-verification{display:none}
         .event-card--compact .event-card-date{width:46px;height:50px}
         @media(max-width:640px){
-          .event-card{grid-template-columns:auto minmax(0,1fr);padding:var(--space-4);gap:var(--space-3)}
+          .event-card{grid-template-columns:auto minmax(0,1fr);padding:var(--space-4);gap:var(--space-3);border-radius:var(--radius-xl)}
+          .event-card-date{width:50px;height:56px;border-radius:var(--radius-lg)}
           .event-card-right{display:none}
           .event-card-title{white-space:normal;font-size:var(--text-sm)}
           .event-card-description{display:none}
